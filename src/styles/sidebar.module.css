@@ -1,0 +1,95 @@
+.sidebar {
+  width: 200px;
+  height: 100vh;
+  background-color: #1F6563;
+  padding: 20px 0px 20px 20px;
+  padding-top: 110px; /* margin from top to avoid navbar overlap */
+  box-sizing: border-box;
+  position: fixed;
+}
+
+
+.title {
+  text-align: center;
+  color: #F7F7F7;
+  font-size: 20px; /* increased font size */
+  font-weight: bold;
+  margin-bottom: 40px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 25px; /* slightly more gap for bigger circle & text */
+}
+
+.link {
+  text-decoration: none;
+  width: 100%;
+  transition: background-color 0.3s, color 0.3s;
+  border-radius: 30px 0px 0px 30px;
+}
+
+.link:hover {
+  background-color: #F7F7F7;
+  color: #1F6563;
+  border-radius: 30px 0px 0px 30px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 20px; /* increase gap to match bigger circle */
+  padding: 12px 15px; 
+}
+
+.circle {
+  width: 40px; 
+  height: 40px;
+  border-radius: 50%;
+  background-color: #D5E6EE;
+  flex-shrink: 0;
+}
+
+
+
+.linkText {
+  color: #F7F7F7;
+  font-weight: 500;
+  font-size: 16px; 
+  flex: 1; 
+}
+
+.link:hover .linkText {
+  color: #1F6563;
+  /* font-weight: 600; */
+}
+
+.active {
+  background-color: #F7F7F7;
+}
+
+.active .circle {
+  background-color: #1F6563;
+}
+
+.active .linkText {
+  color: #1F6563;
+}
+
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;  
+  height: 40px;
+  border-radius: 50%; 
+
+  background-color: #D5E6EE; 
+  color: #1F6563; 
+  font-size: 20px; 
+  margin-right: 10px;
+}
+

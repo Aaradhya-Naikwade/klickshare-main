@@ -1,0 +1,117 @@
+/* components/GrowSection.module.css */
+
+.growSection {
+    position: relative;
+    background-image: url('/Grow-bg.svg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    width: 100%;
+    height: 70vh;
+    padding: 4rem 2rem;
+    box-sizing: border-box;
+
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+
+    overflow: hidden;
+}
+
+.growWrapper {
+    position: absolute;
+    bottom: 5%;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.growWrapper h2 {
+    max-width: 600px;
+    color: #000;
+    font-weight: 600;
+    font-size: 2.5rem;
+    line-height: 2.8rem;
+    margin-bottom: 1rem;
+}
+
+.growContent {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.growContent p {
+    font-size: 1.2rem;
+    margin: 0;
+    color: #333;
+}
+
+.growButton {
+    display: inline-block;
+    font-size: 1.1rem;
+    background-color: #1f6563;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    text-decoration: none;
+    font-weight: 500;
+    border-radius: 20px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+}
+
+.growButton:hover {
+    background-color: #2d9591;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .growWrapper h2 {
+        font-size: 2rem;
+        line-height: 2.4rem;
+    }
+
+    .growContent {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .growContent p {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .growSection {
+        padding: 3rem 1.5rem;
+        align-items: center;
+    }
+
+    .growWrapper {
+        text-align: center;
+    }
+
+    .growWrapper h2 {
+        font-size: 1.8rem;
+        line-height: 2.2rem;
+    }
+
+    .growContent {
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .growContent p {
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    .growButton {
+        width: 100%;
+        max-width: 300px;
+        font-size: 1rem;
+        text-align: center;
+    }
+}

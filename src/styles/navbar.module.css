@@ -1,0 +1,227 @@
+.header {
+  width: 100%;
+  position: relative;
+  z-index: 50;
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logoWrapper {
+  display: flex;
+  align-items: center;
+}
+
+.logoImage {
+  object-fit: contain;
+}
+
+.navLinks {
+  display: flex;
+  gap: 2rem;
+}
+
+.navLink {
+  position: relative;
+  color: #1F6563;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.navLink::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 10px;
+  padding: 2px;
+  background: linear-gradient(90deg, #1F6563 0%, #D3F5F7 61%, #1F6563 98%);
+  background-size: 300% 300%;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.navLink:hover::before,
+.navLink:focus::before,
+.navLinkActive::before {
+  opacity: 1;
+  animation: gradientMove 7s linear infinite;
+}
+
+.authSection {
+  display: flex;
+  align-items: center;
+}
+
+.tryNow {
+  background-color: #F4C900;
+  border: none;
+  border-radius: 10px;
+  padding: 0.6rem 1.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+}
+
+.tryNow:hover {
+  transform: scale(1.05);
+}
+
+/* ========== MOBILE MENU ========== */
+.menuToggle {
+  background: none;
+  border: none;
+  color: #1F6563;
+  cursor: pointer;
+}
+
+/* Sidebar menu */
+.mobileMenu {
+  position: fixed;
+  top: 0;
+  left: -100%;
+  width: 70%;
+  max-width: 280px;
+  height: 100vh;
+  background-color: #E6F9FA;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 5rem 2rem;
+  transition: left 0.3s ease;
+  z-index: 40;
+}
+
+.mobileMenu.active {
+  left: 0;
+}
+
+.mobileLink {
+  color: #1F6563;
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.mobileLink:hover {
+  color: #0d3c3a;
+}
+
+/* Background overlay */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 30;
+}
+
+/* Responsive Behavior */
+@media (max-width: 768px) {
+  .navLinks {
+    display: none;
+  }
+
+  .logoImage {
+    width: 70%;
+  }
+
+  .tryNow {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    width: 120px;
+  }
+
+
+}
+.closeButton {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.5rem;
+  background: none;
+  border: none;
+  color: #1F6563;
+  cursor: pointer;
+}
+
+
+/* Dropdown menu below Try Now */
+.dropdownMenu {
+  position: absolute;
+  top: 100%;          /* directly below the button */
+  right: 0;           /* aligns to right edge of the Try Now button */
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  width: 180px;
+  z-index: 50;
+  margin-top: 0.5rem; /* small gap below Try Now button */
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0;
+  animation: dropdownFade 0.2s ease;
+}
+
+/* Each dropdown item */
+.dropdownItem {
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  color: #333;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.dropdownItem:hover {
+  background-color: #f3f4f6;
+  color: #000;
+}
+
+/* Dropdown fade animation */
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

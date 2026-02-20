@@ -1,0 +1,127 @@
+.joinSection {
+  width: 100%;
+  max-width: 100%;
+  background-image: url(/join.jpg);
+  background-position: bottom center; 
+  background-size: contain; 
+  background-repeat: no-repeat;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-height: 100vh;
+  padding-bottom: 40px;
+  margin-bottom: -5px;
+}
+
+
+/* Gradient heading */
+.gradientText {
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, #1F6563, #3ECBC7, #2F9895);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.2;
+  text-align: left;
+}
+
+/* Review box */
+.dialogueBox {
+  background-color: white;
+  border-radius: 16px;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 620px;
+  position: relative;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Triangle pointing downward */
+.triangle {
+  width: 0;
+  height: 0;
+  border-left: 30px solid transparent;
+  border-right: 30px solid transparent;
+  border-top: 60px solid white;
+  margin-top: -1px;
+  filter: drop-shadow(0 6px 6px rgba(0, 0, 0, 0.15));
+  z-index: 10;
+}
+
+/* Profile image */
+.profileCircle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #1F6563;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .joinSection {
+    background-image: none;
+    background-color: #e6f9fa;
+    min-height: auto; /* grow with content */
+    padding-bottom: 20px;
+  }
+
+  .gradientText {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .dialogueBox {
+    max-width: 480px;
+  }
+
+  .triangle {
+    border-left: 25px solid transparent;
+    border-right: 25px solid transparent;
+    border-top: 50px solid white;
+  }
+
+  .profileCircle {
+    width: 45px;
+    height: 45px;
+  }
+
+  .profileCircle img {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+@media (max-width: 768px) {
+ 
+}
+
+@media (max-width: 640px) {
+  .gradientText {
+    font-size: 1.6rem;
+  }
+
+  .dialogueBox {
+    max-width: 90%;
+    padding: 20px 16px;
+  }
+
+  .triangle {
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-top: 40px solid white;
+  }
+
+  .profileCircle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .profileCircle img {
+    width: 24px;
+    height: 24px;
+  }
+}

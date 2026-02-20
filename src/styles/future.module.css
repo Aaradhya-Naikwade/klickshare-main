@@ -1,0 +1,89 @@
+/* Gradient Text */
+.gradientText {
+  background: linear-gradient(90deg, #1F6563 0%, #3ECBC7 39%, #2F9895 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 3.125rem;
+}
+
+@media (max-width: 768px) {
+  .gradientText {
+    font-size: 2.25rem; /* smaller on mobile */
+  }
+}
+
+/* Subtext */
+.subText {
+  color: #697E7F;
+  font-size: 1.125rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .subText {
+    font-size: 1rem;
+    text-align: center;
+  }
+  
+}
+
+/* Card */
+.card {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 2.5rem;
+  padding: 30px;
+  padding-bottom: 70px;
+}
+
+/* Buttons */
+.joinButton {
+  background-color: #F4C900;
+  color: black;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+.joinButton:hover { background-color: #ffd82b; transform: translateY(-2px); }
+
+.pricingButton {
+  background-color: #E6F9FA;
+  color: #1F6563;
+  border: 1px solid #1F6563;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+.pricingButton:hover { background-color: #dafdff; transform: translateY(-2px); }
+
+/* Info Section */
+.infoHeading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1F6563;
+}
+
+.infoSubtext {
+  font-size: 0.875rem;
+  color: #697E7F;
+  line-height: 1.4;
+}
+
+/* Center text on mobile for info sections */
+@media (max-width: 640px) {
+  .infoHeading, .infoSubtext {
+    text-align: center;
+  }
+
+}
+
+@media (max-width: 768px) {
+  .buttonContainer {
+    justify-content: center;
+    flex-wrap: nowrap;
+  }
+}

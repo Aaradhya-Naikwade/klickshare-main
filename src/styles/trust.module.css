@@ -1,0 +1,103 @@
+/* Gradient Heading */
+.gradientText {
+  background: linear-gradient(90deg, #1F6563 0%, #3ECBC7 39%, #2F9895 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 3rem;
+}
+
+@media (max-width: 768px) {
+  .gradientText {
+    font-size: 2.25rem;
+  }
+}
+
+/* Subtext */
+.subText {
+  color: #697E7F;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .subText {
+    text-align: left;
+  }
+}
+
+/* Left vertical cards hover */
+.trustCard {
+  background-color: #1F6563;
+  color: white;
+  border-radius: 25px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.trustCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+}
+
+/* Card heading/subtext */
+.cardHeading {
+  font-size: 3rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+.cardSubtext {
+  font-size: 1rem;
+  color: #E8EFEF;
+  line-height: 1.4;
+}
+
+/* Right card */
+.rightCard {
+  background-color: #E6F9FA;
+  border-radius: 25px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding-inline: 50px;
+}
+
+@media (max-width: 768px) {
+  .rightCard {
+    padding-inline: 20px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    align-items: flex-start;
+  }
+}
+
+/* Circle for icons */
+.circle {
+  background-color: #1F6563;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Right side headings/text */
+.pointHeading {
+  color: #1F6563;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+@media (min-width: 768px) {
+  .pointHeading {
+    font-size: 1.808rem;
+  }
+}
+
+.pointSubtext {
+  color: #697E7F;
+  font-size: 1rem;
+  line-height: 1.4;
+}
