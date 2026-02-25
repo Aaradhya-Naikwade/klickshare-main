@@ -59,13 +59,13 @@ export async function POST(req: Request) {
     const expiresAt = new Date(
       Date.now() + 7 * 24 * 60 * 60 * 1000
     );
-
+        
     await Session.create({
       userId: user._id,
       token,
       expiresAt,
     });
-    
+
     return NextResponse.json({
       exists: true,
       token,
@@ -79,3 +79,5 @@ export async function POST(req: Request) {
     );
   }
 }
+
+

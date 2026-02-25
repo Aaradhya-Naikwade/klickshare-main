@@ -631,7 +631,7 @@ export default function GroupDetailsTab({
             },
           }
         );
-
+        
       const data =
         await res.json();
 
