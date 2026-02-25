@@ -332,7 +332,7 @@ export async function POST(req: Request) {
         facesIndexed: photo.facesIndexed,
       });
     }
-
+    
     return NextResponse.json({
       success: true,
       count: uploadedPhotos.length,
