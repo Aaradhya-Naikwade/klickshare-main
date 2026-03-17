@@ -34,7 +34,7 @@ export default function AuthForm() {
 
   const [loading, setLoading] = useState(false);
 
-  // SEND OTP
+  // SEND OTP (PHONE STEP)
   async function sendOtp() {
     try {
       setLoading(true);
@@ -56,9 +56,15 @@ export default function AuthForm() {
             : data.error || "Failed to send OTP"
         );
 
-      toast.success("OTP sent successfully");
-
-      setStep("otp");
+      if (data.exists) {
+        toast.success("OTP sent successfully");
+        setStep("otp");
+      } else {
+        toast.success(
+          "OTP sent successfully. Continue signup."
+        );
+        setStep("role");
+      }
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -89,7 +95,7 @@ export default function AuthForm() {
           data.error || "Invalid OTP"
         );
 
-      // existing user → login
+      // existing user -> login
       if (data.exists) {
         setToken(data.token);
 
@@ -99,9 +105,7 @@ export default function AuthForm() {
         return;
       }
 
-      toast.success("OTP verified");
-
-      // new user → select role
+      toast.success("Account not found. Continue signup.");
       setStep("role");
     } catch (err: any) {
       toast.error(err.message);
@@ -127,6 +131,7 @@ export default function AuthForm() {
             role,
             name,
             companyName,
+            otp,
           }),
         }
       );
@@ -398,6 +403,27 @@ export default function AuthForm() {
               />
             </div>
 
+            {/* OTP */}
+            <div>
+              <label className="text-sm font-medium text-[#111827]">
+                OTP
+              </label>
+
+              <div className="relative mt-1">
+                <ShieldCheck className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0f766e] w-5 h-5" />
+
+                <input
+                  type="text"
+                  placeholder="Enter OTP"
+                  className="w-full bg-white border border-[#b2dfdb] rounded-lg pl-10 pr-4 py-3 text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#0f766e] focus:border-[#0f766e]"
+                  value={otp}
+                  onChange={(e) =>
+                    setOtp(e.target.value)
+                  }
+                />
+              </div>
+            </div>
+
             {/* BUTTON */}
             <button
               onClick={completeSignup}
@@ -424,3 +450,6 @@ export default function AuthForm() {
     </div>
   );
 }
+
+
+

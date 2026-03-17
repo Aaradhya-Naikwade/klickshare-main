@@ -10,17 +10,24 @@
   - JSON endpoints: `Content-Type: application/json`
   - File upload endpoints: `multipart/form-data`
 
-## 2) Authentication and Session Rules
+## 2) Authentication Rules (Token-Based)
 
 - OTP is dynamically generated and sent via SMS.
-- Login/signup creates a session with **single-device policy**:
-  - Old sessions are set inactive.
-  - New token expires in 7 days.
-- Protected routes return `401 Unauthorized` when token is missing/invalid/expired/inactive.
+- Login/signup returns a JWT token.
+- Logout is client-side (discard token). No server-side session exists.
+- Protected routes return `401 Unauthorized` when token is missing/invalid/expired.
 
 ---
 
 ## 3) Auth APIs
+
+### Flow Summary (Login vs Signup)
+- Step 1 (both): `POST /api/auth/send-otp` sends OTP and returns `{ exists: true | false }`.
+- Existing user (login):
+  - Step 2: `POST /api/auth/verify-otp` validates OTP and returns `{ token, user }`.
+- New user (signup):
+  - Step 2: User selects role and fills signup form.
+  - Step 3: `POST /api/auth/complete-signup` validates OTP, creates user, and returns `{ token, user }`.
 
 ### 3.1 Send OTP
 - Method: `POST`
@@ -30,9 +37,16 @@
 ```json
 { "phone": "9876543210" }
 ```
+- Notes:
+  - OTP is always sent for a valid phone number.
+  - Response includes `exists` so client can branch to login or signup.
 - Success `200`:
 ```json
-{ "success": true }
+{ "success": true, "exists": true }
+```
+- Success `200` (user does not exist):
+```json
+{ "success": true, "exists": false }
 ```
 - Error cases:
   - `400`: `{ "error": "Phone required" }`
@@ -67,7 +81,8 @@
   "phone": "9876543210",
   "role": "viewer",
   "name": "John",
-  "companyName": "Studio X"
+  "companyName": "Studio X",
+  "otp": "0000"
 }
 ```
 - Notes:
@@ -77,6 +92,8 @@
 { "token": "<jwt>", "user": { "...": "..." } }
 ```
 - Error cases:
+  - `400`: `{ "error": "Invalid OTP" }`
+  - `409`: `{ "error": "User already exists" }`
   - `500`: `{ "error": "Signup failed" }`
 
 ### 3.4 Logout

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Otp from "@/models/Otp";
 import SendSMS from "@/lib/sendSMS";
+import User from "@/models/User";
 
 export async function POST(req: Request) {
   try {
@@ -22,6 +23,10 @@ export async function POST(req: Request) {
         { error: "Enter valid 10 digit phone" },
         { status: 400 }
       );
+
+    const existingUser = await User.findOne({
+      phone: normalizedPhone,
+    }).select("_id");
 
     const OTP = Math.floor(
       1000 + Math.random() * 9000
@@ -72,6 +77,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+      exists: Boolean(existingUser),
       gatewayResponse: smsResult,
     });
   } catch (error) {

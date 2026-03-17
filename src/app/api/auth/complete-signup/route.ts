@@ -1,50 +1,9 @@
-// import { NextResponse } from "next/server";
-// import { connectDB } from "@/lib/db";
-// import User from "@/models/User";
-// import { signToken } from "@/lib/jwt";
-
-// export async function POST(req: Request) {
-//   await connectDB();
-
-//   const { phone, role, name, companyName } =
-//     await req.json();
-
-//   const exists = await User.findOne({ phone });
-
-//   if (exists)
-//     return NextResponse.json(
-//       { error: "Phone exists" },
-//       { status: 400 }
-//     );
-
-//   const user = await User.create({
-//     phone,
-//     role,
-//     name,
-//     companyName,
-//     lastLoginAt: new Date(),
-//   });
-
-//   const token = signToken({
-//     userId: user._id,
-//   });
-
-//   return NextResponse.json({
-//     token,
-//     user,
-//   });
-// }
-
-
-
-
-
 
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import Session from "@/models/Session";
 import { signToken } from "@/lib/jwt";
+import Otp from "@/models/Otp";
 
 export async function POST(req: Request) {
   try {
@@ -55,11 +14,45 @@ export async function POST(req: Request) {
       role,
       name,
       companyName,
+      otp,
     } = await req.json();
 
+    const normalizedPhone = String(phone).trim();
+    const normalizedOtp = String(otp).trim();
+
+    const existingUser = await User.findOne({
+      phone: normalizedPhone,
+    }).select("_id");
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "User already exists" },
+        { status: 409 }
+      );
+    }
+
+    const otpRecord = await Otp.findOne({
+      phone: normalizedPhone,
+      consumedAt: null,
+    }).sort({ createdAt: -1 });
+
+    if (
+      !otpRecord ||
+      otpRecord.expiresAt < new Date() ||
+      otpRecord.otp !== normalizedOtp
+    ) {
+      return NextResponse.json(
+        { error: "Invalid OTP" },
+        { status: 400 }
+      );
+    }
+ 
+    otpRecord.consumedAt = new Date();
+    await otpRecord.save();
+    
     const newUser =
       await User.create({
-        phone,
+        phone: normalizedPhone,
         role,
         name,
         companyName:
@@ -73,24 +66,8 @@ export async function POST(req: Request) {
       userId: newUser._id.toString(),
     });
 
-    // 🔥 SINGLE DEVICE LOGIN
-    await Session.updateMany(
-      { userId: newUser._id },
-      { isActive: false }
-    );
-
-    const expiresAt = new Date(
-      Date.now() + 7 * 24 * 60 * 60 * 1000
-    );
-
-    await Session.create({
-      userId: newUser._id,
-      token,
-      expiresAt,
-    });
-
     return NextResponse.json({
-      token,
+      token,  
       user: newUser,
     });
   } catch (error) {
