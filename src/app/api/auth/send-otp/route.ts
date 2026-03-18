@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
     const normalizedPhone = String(phone).trim();
 
-    if (!/^\d{10}$/.test(normalizedPhone))
+    if (!/^\d{10}$/.test(normalizedPhone)) 
       return NextResponse.json(
         { error: "Enter valid 10 digit phone" },
         { status: 400 }
