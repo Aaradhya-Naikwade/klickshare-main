@@ -15,7 +15,6 @@ export default function CreateGroupTab() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  // Load events for dropdown
   async function loadEvents() {
     try {
       const token = getToken();
@@ -41,7 +40,6 @@ export default function CreateGroupTab() {
     loadEvents();
   }, []);
 
-  // Create group
   async function handleCreateGroup() {
     try {
       setLoading(true);
@@ -74,7 +72,7 @@ export default function CreateGroupTab() {
         throw new Error(data.error || "Failed to create group");
       }
 
-      setSuccess("Group created successfully 🎉");
+      setSuccess("Group created successfully");
       setName("");
       setDescription("");
       setEventId("");
@@ -87,12 +85,10 @@ export default function CreateGroupTab() {
 
   return (
     <div className="max-w-3xl space-y-10">
-      {/* ================= CREATE EVENT (TOP) ================= */}
       <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
         <CreateEventTab />
       </div>
 
-      {/* ================= HEADER ================= */}
       <div>
         <h1 className="text-2xl font-bold text-[#0f766e] flex items-center gap-2">
           <Users className="w-6 h-6" />
@@ -103,23 +99,19 @@ export default function CreateGroupTab() {
         </p>
       </div>
 
-      {/* ================= MAIN CARD ================= */}
       <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-md transition">
-        {/* Success */}
         {success && (
           <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg mb-5">
             {success}
           </div>
         )}
 
-        {/* Error */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg mb-5">
             {error}
           </div>
         )}
 
-        {/* Select Event */}
         <div className="mb-5">
           <label className="text-sm font-semibold text-gray-800">
             Select Event *
@@ -140,7 +132,6 @@ export default function CreateGroupTab() {
           </select>
         </div>
 
-        {/* Group Name */}
         <div className="mb-5">
           <label className="text-sm font-semibold text-gray-800">
             Group Name *
@@ -154,7 +145,6 @@ export default function CreateGroupTab() {
           />
         </div>
 
-        {/* Description */}
         <div className="mb-5">
           <label className="text-sm font-semibold text-gray-800">
             Description
@@ -169,7 +159,6 @@ export default function CreateGroupTab() {
           />
         </div>
 
-        {/* Visibility */}
         <div className="mb-7">
           <label className="text-sm font-semibold text-gray-800">
             Visibility
@@ -185,7 +174,6 @@ export default function CreateGroupTab() {
           </select>
         </div>
 
-        {/* Action Row */}
         <div className="flex items-center justify-between">
           <div className="text-xs text-gray-400 flex items-center gap-1">
             <Layers className="w-4 h-4" />

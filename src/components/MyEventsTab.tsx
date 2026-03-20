@@ -377,6 +377,7 @@ export default function MyEventsTab({
     loadEvents();
   }, []);
 
+
   // ================= DELETE EVENT =================
   async function handleDeleteEvent() {
     if (!deleteEventId) return;

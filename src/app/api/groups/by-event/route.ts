@@ -130,6 +130,8 @@ export async function GET(req: Request) {
       (group: any) => ({
         _id: group._id.toString(),
         name: group.name,
+        visibility: group.visibility,
+        inviteCode: group.inviteCode,
         eventId: group.eventId,
         createdAt: group.createdAt,
       })

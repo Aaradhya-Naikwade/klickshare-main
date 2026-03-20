@@ -61,6 +61,7 @@ export default function EventDetailsTab({
     loadGroups();
   }, []);
 
+
   function copyInviteCode(
     code: string
   ) {

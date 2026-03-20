@@ -481,7 +481,42 @@ or
   - `404`: Group not found
   - `500`: Upload failed
 
-### 7.2 Get Group Photos
+### 7.2 Upload Folder (auto-create groups)
+- Method: `POST`
+- Path: `/api/photos/upload-folder`
+- Auth: Yes (photographer only, must own event)
+- Body: `multipart/form-data`
+  - `eventId` (required)
+  - `visibility` (optional, default `private`)
+  - `file` (required, multiple; each filename should include relative path like `Wedding2026/Haldi/img1.jpg`)
+- Behavior:
+  - Creates a new group for each unique subfolder inside the uploaded folder
+  - Root-level files go to a new `General` group
+  - Does not reuse existing groups
+  - Uploads each photo into its mapped group
+  - Calls face service `/index-group-photo` per photo
+- Success `200`:
+```json
+{
+  "success": true,
+  "groupCount": 3,
+  "groups": [
+    { "_id": "...", "name": "Haldi", "inviteCode": "...", "qrCodeUrl": "INVITE:..." }
+  ],
+  "count": 20,
+  "photos": [
+    { "_id": "...", "photoUrl": "...", "groupId": "...", "uploadedBy": "...", "createdAt": "...", "facesIndexed": false }
+  ]
+}
+```
+- Error cases:
+  - `400`: Missing data
+  - `401`: Unauthorized
+  - `403`: Not allowed or not event owner
+  - `404`: User/Event not found
+  - `500`: Upload failed
+
+### 7.3 Get Group Photos
 - Method: `GET`
 - Path: `/api/photos/group?groupId=<id>`
 - Auth: Yes
@@ -498,7 +533,7 @@ or
   - `403`: Access denied
   - `500`: Server error
 
-### 7.3 My Face Matches
+### 7.4 My Face Matches
 - Method: `GET`
 - Path: `/api/photos/my-face`
 - Auth: Yes
