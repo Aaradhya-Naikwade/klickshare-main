@@ -46,6 +46,11 @@ const UserSchema =
         default: Date.now,
       },
 
+      authToken: {
+        type: String,
+        default: "",
+      },
+
     },
 
     {

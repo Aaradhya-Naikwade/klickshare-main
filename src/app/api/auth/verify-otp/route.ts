@@ -50,6 +50,8 @@ export async function POST(req: Request) {
       userId: user._id.toString(),
     });
 
+    user.authToken = token;
+    await user.save();
     return NextResponse.json({
       exists: true,
       token,
