@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 // const MONGODB_URI =
-  // "mongodb+srv://aaradhyanaikwade2520_db_user:GNWudNA3aZWQzjCm@cluster0.nnu1e7k.mongodb.net/klickshare?retryWrites=true&w=majority";
+//   "mongodb+srv://aaradhyanaikwade2520_db_user:GNWudNA3aZWQzjCm@cluster0.nnu1e7k.mongodb.net/klickshare?retryWrites=true&w=majority";
 
 const MONGODB_URI =
   "mongodb+srv://d21350180:Deepakd213@cluster0.eqn7ymc.mongodb.net/?retryWrites=true&w=majority";
