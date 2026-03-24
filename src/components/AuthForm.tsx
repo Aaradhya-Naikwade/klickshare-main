@@ -402,7 +402,7 @@ export default function AuthForm() {
                 className="w-full border border-[#b2dfdb] bg-gray-50 rounded-lg p-3 text-[#111827] capitalize"
               />
             </div>
-
+            
             {/* OTP */}
             <div>
               <label className="text-sm font-medium text-[#111827]">
