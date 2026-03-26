@@ -244,6 +244,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { removeToken } from "@/lib/auth";
 
 import DashboardLayout from "@/components/DashboardLayout";
 import ViewerSidebar from "@/components/ViewerSidebar";
@@ -298,7 +299,7 @@ export default function ViewerDashboard() {
       );
 
       if (!res.ok) {
-        localStorage.removeItem("token");
+        removeToken();
         router.replace("/auth");
         return;
       }

@@ -549,6 +549,7 @@ or
   - `401`: Unauthorized
   - `500`: Server error
 
+
 ---
 
 ## 8) Notification APIs
@@ -642,3 +643,50 @@ Most failures use:
 ```
 
 Some non-error business cases return `200` with `message` (example: already joined / pending join request).
+
+---
+
+## 11) Download APIs
+
+### 11.1 Download Single Photo
+- Method: `POST`
+- Path: `/api/photos/download`
+- Auth: Yes
+- Body:
+```json
+{ "photoId": "..." }
+```
+- Access rules:
+  - `owner` / `contributor` / `accessLevel=full` can download any photo in the group
+  - partial access can download only their own uploads
+  - `viewer` can download photos that appear in their **My Photos** (face match) list
+- Success `200`:
+```json
+{ "success": true, "url": "https://signed-s3-url" }
+```
+- Error cases:
+  - `400`: Photo ID required
+  - `401`: Unauthorized
+  - `403`: Access denied
+  - `404`: Photo not found
+  - `500`: Download failed
+
+### 11.2 Bulk Download (ZIP)
+- Method: `POST`
+- Path: `/api/photos/bulk-download`
+- Auth: Yes
+- Body:
+```json
+{ "photoIds": ["...", "..."] }
+```
+- Behavior:
+  - Returns a ZIP file (`application/zip`) containing all allowed photos.
+  - Access rules are the same as single download.
+- Success `200`:
+  - Response is a ZIP stream with `Content-Disposition: attachment; filename="photos.zip"`
+- Error cases:
+  - `400`: Photo IDs required
+  - `401`: Unauthorized
+  - `403`: Access denied
+  - `404`: Photos not found
+  - `500`: Bulk download failed

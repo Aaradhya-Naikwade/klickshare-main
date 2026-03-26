@@ -29,9 +29,9 @@ if (!cached) {
       promise: null,
 
     };
-    
-}
 
+}
+      
 export async function connectDB() {
 
   try {

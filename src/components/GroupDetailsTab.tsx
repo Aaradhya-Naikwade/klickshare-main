@@ -560,7 +560,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getToken } from "@/lib/auth";
+import { getToken, removeToken } from "@/lib/auth";
 import { toast } from "sonner";
 
 import UploadPhotoTab from "@/components/UploadPhotoTab";
@@ -649,6 +649,11 @@ export default function GroupDetailsTab({
             },
           }
         );
+
+      if (!meRes.ok) {
+        removeToken();
+        throw new Error("Please login again");
+      }
 
       const me =
         await meRes.json();

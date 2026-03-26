@@ -60,6 +60,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { removeToken } from "@/lib/auth";
 
 export default function DashboardRedirect() {
   const router = useRouter();
@@ -78,6 +79,12 @@ export default function DashboardRedirect() {
           Authorization: `Bearer ${token}`,
         },
       });
+
+      if (!res.ok) {
+        removeToken();
+        router.replace("/auth");
+        return;
+      }
 
       const user = await res.json();
 

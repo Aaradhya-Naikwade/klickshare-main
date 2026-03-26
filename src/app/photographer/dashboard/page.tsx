@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { removeToken } from "@/lib/auth";
 
 import DashboardLayout from "@/components/DashboardLayout";
 import PhotographerSidebar from "@/components/PhotographerSidebar";
@@ -75,8 +76,7 @@ export default function PhotographerDashboard() {
         );
 
       if (!res.ok) {
-
-        localStorage.removeItem("token");
+        removeToken();
 
         router.replace("/auth");
 
