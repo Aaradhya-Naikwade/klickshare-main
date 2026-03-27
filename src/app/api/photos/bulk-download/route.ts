@@ -36,6 +36,7 @@ export async function POST(req: Request) {
         { status: 401 }
       );
     }
+    const authUserId = auth.userId;
 
     const { photoIds } = await req.json();
 
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
 
     const memberships = await GroupMember.find({
       groupId: { $in: groupIds },
-      userId: auth.userId,
+      userId: authUserId,
       status: "approved",
     });
 
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
     );
 
     const user = await User.findById(
-      auth.userId
+      authUserId
     ).select("role");
 
     let matchedUrls: Set<string> | null = null;
@@ -94,7 +95,7 @@ export async function POST(req: Request) {
                 "application/json",
             },
             body: JSON.stringify({
-              user_id: auth.userId,
+              user_id: authUserId,
             }),
           }
         );
@@ -140,7 +141,7 @@ export async function POST(req: Request) {
         p.uploadedBy?.toString?.() ||
         String(p.uploadedBy);
 
-      if (uploader === auth.userId) {
+      if (uploader === authUserId) {
         allowedPhotos.push(p);
         continue;
       }
