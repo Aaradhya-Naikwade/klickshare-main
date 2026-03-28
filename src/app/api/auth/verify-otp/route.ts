@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import Otp from "@/models/Otp";
 import { signToken } from "@/lib/jwt";
+import { isAdminPhone } from "@/lib/admin";
 
 export async function POST(req: Request) {
   try {
@@ -22,6 +23,10 @@ export async function POST(req: Request) {
       return NextResponse.json({
         exists: false,
       });
+    }
+
+    if (isAdminPhone(user.phone) && !user.isAdmin) {
+      user.isAdmin = true;
     }
 
     const otpRecord = await Otp.findOne({

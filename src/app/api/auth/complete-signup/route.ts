@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { signToken } from "@/lib/jwt";
 import Otp from "@/models/Otp";
+import { isAdminPhone } from "@/lib/admin";
 
 export async function POST(req: Request) {
   try {
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
             ? companyName
             : "",
         lastLoginAt: new Date(),
+        isAdmin: isAdminPhone(normalizedPhone),
       });
 
     const token = signToken({

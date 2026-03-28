@@ -8,6 +8,8 @@ import "@/models/Group";
 import "@/models/GroupMember";
 import "@/models/Notification";
 import "@/models/Photo"
+import "@/models/Plan"
+import "@/models/PaymentEvent"
 
 
 export {};

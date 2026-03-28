@@ -12,6 +12,7 @@ import Group from "@/models/Group";
 
 import { uploadToS3 } from "@/lib/s3";
 import { FACE_API_URL } from "@/lib/faceApi";
+import { assertQuota } from "@/lib/subscription";
 
 export async function POST(req: Request) {
   try {
@@ -47,6 +48,22 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Missing data" },
         { status: 400 }
+      );
+    }
+
+    const quotaCheck = await assertQuota(
+      decoded.userId,
+      files.length
+    );
+
+    if (!quotaCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Quota exceeded",
+          remaining: quotaCheck.status.remaining,
+          quota: quotaCheck.status.quota,
+        },
+        { status: 403 }
       );
     }
 

@@ -51,6 +51,12 @@ const UserSchema =
         default: "",
       },
 
+      isAdmin: {
+        type: Boolean,
+        default: false,
+        index: true,
+      },
+
     },
 
     {

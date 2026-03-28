@@ -21,6 +21,7 @@ import EventDetailsTab from "@/components/EventDetailsTab";
 import GroupDetailsTab from "@/components/GroupDetailsTab";
 
 import NotificationsTab from "@/components/NotificationsTab";
+import TransactionsTab from "@/components/TransactionsTab";
 
 // NEW
 import CaptureProfilePhoto from "@/components/CaptureProfilePhoto";
@@ -317,6 +318,10 @@ if (!user) {
 
             {active === "Notifications" && (
               <NotificationsTab />
+            )}
+
+            {active === "Transactions" && (
+              <TransactionsTab />
             )}
 
           </>

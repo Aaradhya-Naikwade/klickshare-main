@@ -465,6 +465,9 @@ or
 - Permission:
   - Must be approved member
   - Role must be `owner` or `contributor`
+- Quota:
+  - Uploads are limited by the user's yearly plan quota.
+  - When exceeded, returns `403` with remaining/quota info.
 - Success `200`:
 ```json
 { "success": true, "photo": { "_id": "...", "photoUrl": "...", "groupId": "...", "uploadedBy": "...", "createdAt": "...", "facesIndexed": false } }
@@ -515,6 +518,7 @@ or
   - `403`: Not allowed or not event owner
   - `404`: User/Event not found
   - `500`: Upload failed
+  - `403`: Quota exceeded
 
 ### 7.3 Get Group Photos
 - Method: `GET`
@@ -548,6 +552,32 @@ or
 - Error cases:
   - `401`: Unauthorized
   - `500`: Server error
+
+### 7.5 Delete Photo
+- Method: `DELETE`
+- Path: `/api/photos/delete`
+- Auth: Yes
+- Body:
+```json
+{ "photoId": "..." }
+```
+- Access rules:
+  - Group owner can delete any photo in the group
+  - Photo uploader can delete their own photo
+  - Other members cannot delete
+- Behavior:
+  - Deletes the object from S3
+  - Deletes the photo record from DB
+- Success `200`:
+```json
+{ "success": true }
+```
+- Error cases:
+  - `400`: Photo ID required
+  - `401`: Unauthorized
+  - `403`: Access denied / Delete not allowed
+  - `404`: Photo not found
+  - `500`: Delete failed
 
 
 ---
@@ -632,6 +662,7 @@ or
 - Member role: `owner | contributor | viewer`
 - Member access: `partial | full`
 - Member status: `pending | approved | rejected | blocked`
+- Plan key: `free | p5000 | p10000 | p30000`
 
 ---
 
@@ -690,3 +721,122 @@ Some non-error business cases return `200` with `message` (example: already join
   - `403`: Access denied
   - `404`: Photos not found
   - `500`: Bulk download failed
+
+---
+
+## 12) Billing & Plans
+
+### 12.0 Get Plan Catalog
+- Method: `GET`
+- Path: `/api/billing/plans`
+- Auth: No
+- Success `200`:
+```json
+{
+  "plans": [
+    { "key": "free", "label": "Free", "priceInr": 0, "quota": 1000 },
+    { "key": "p5000", "label": "Yearly 5,000", "priceInr": 700, "quota": 5000 }
+  ]
+}
+```
+
+### 12.1 Get Plan Status
+- Method: `GET`
+- Path: `/api/billing/status`
+- Auth: Yes
+- Success `200`:
+```json
+{
+  "success": true,
+  "status": {
+    "planKey": "free",
+    "planStart": "2026-01-01T00:00:00.000Z",
+    "planEnd": "2027-01-01T00:00:00.000Z",
+    "quota": 1000,
+    "used": 120,
+    "remaining": 880
+  }
+}
+```
+- Error cases:
+  - `401`: Unauthorized
+  - `500`: Failed to fetch status
+
+### 12.2 Create Razorpay Order
+- Method: `POST`
+- Path: `/api/billing/create-order`
+- Auth: Yes
+- Body:
+```json
+{ "planKey": "p5000" }
+```
+- Success `200`:
+```json
+{
+  "orderId": "order_XXXX",
+  "amount": 70000,
+  "currency": "INR",
+  "keyId": "<razorpay_key_id>"
+}
+```
+- Error cases:
+  - `400`: Invalid plan
+  - `401`: Unauthorized
+  - `500`: Order creation failed
+
+### 12.3 Verify Payment (Client Callback)
+- Method: `POST`
+- Path: `/api/billing/verify`
+- Auth: Yes
+- Body:
+```json
+{
+  "planKey": "p5000",
+  "razorpay_order_id": "order_XXXX",
+  "razorpay_payment_id": "pay_XXXX",
+  "razorpay_signature": "signature"
+}
+```
+- Success `200`:
+```json
+{ "success": true }
+```
+- Error cases:
+  - `400`: Invalid plan or signature
+  - `401`: Unauthorized
+  - `404`: Payment not found
+  - `500`: Verification failed
+
+### 12.4 Razorpay Webhook
+- Method: `POST`
+- Path: `/api/billing/webhook`
+- Auth: No (webhook signature required)
+- Notes:
+  - Handles `payment.captured`
+  - Activates the purchased plan
+
+### 12.5 Transactions
+- Method: `GET`
+- Path: `/api/billing/transactions`
+- Auth: Yes
+- Success `200`:
+```json
+{
+  "success": true,
+  "payments": [
+    {
+      "_id": "...",
+      "planKey": "p5000",
+      "amount": 700,
+      "currency": "INR",
+      "status": "paid",
+      "razorpayOrderId": "order_XXXX",
+      "razorpayPaymentId": "pay_XXXX",
+      "createdAt": "2026-03-27T00:00:00.000Z"
+    }
+  ]
+}
+```
+- Error cases:
+  - `401`: Unauthorized
+  - `500`: Failed to fetch payments

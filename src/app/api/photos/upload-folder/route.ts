@@ -12,6 +12,7 @@ import Photo from "@/models/Photo";
 import User from "@/models/User";
 
 import crypto from "crypto";
+import { assertQuota } from "@/lib/subscription";
 
 type GroupInfo = {
   _id: string;
@@ -69,6 +70,23 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Missing data" },
         { status: 400 }
+      );
+    }
+
+    const quotaCheck = await assertQuota(
+      decoded.userId,
+      files.length
+    );
+
+    
+    if (!quotaCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: "Quota exceeded",
+          remaining: quotaCheck.status.remaining,
+          quota: quotaCheck.status.quota,
+        },
+        { status: 403 }
       );
     }
 

@@ -2,6 +2,7 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 
 import { v4 as uuidv4 } from "uuid";
@@ -89,4 +90,15 @@ export async function getS3ObjectStream(
   const response = await s3.send(command);
 
   return response.Body;
+}
+
+export async function deleteFromS3(
+  key: string
+) {
+  const command = new DeleteObjectCommand({
+    Bucket: process.env.AWS_BUCKET_NAME!,
+    Key: key,
+  });
+
+  await s3.send(command);
 }

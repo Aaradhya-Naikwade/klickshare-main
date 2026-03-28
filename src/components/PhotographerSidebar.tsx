@@ -89,6 +89,7 @@ import {
   Users,
   UserPlus,
   Bell,
+  Receipt,
   LogOut,
 } from "lucide-react";
 
@@ -110,6 +111,7 @@ export default function PhotographerSidebar({
     { name: "Join New Group", icon: UserPlus },
     { name: "Join Requests", icon: Users },
     { name: "Notifications", icon: Bell },
+    { name: "Transactions", icon: Receipt },
   ];
 
   return (

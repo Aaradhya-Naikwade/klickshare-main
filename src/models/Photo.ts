@@ -40,5 +40,10 @@ const PhotoSchema = new mongoose.Schema({
   },
 });
 
+PhotoSchema.index(
+  { uploadedBy: 1, createdAt: 1 },
+  { name: "uploader_created_idx" }
+);
+
 export default mongoose.models.Photo ||
   mongoose.model("Photo", PhotoSchema);

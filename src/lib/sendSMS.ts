@@ -8,10 +8,35 @@ class SendSMS {
       const sMessage = encodeURIComponent(message);
       void sMessage;
 
-      const URI =
-        "http://136.243.171.112/api/sendhttp.php?";
+      const baseUrl =
+        process.env.SMS_BASE_URL || "";
+      const authKey =
+        process.env.SMS_AUTH_KEY || "";
+      const sender =
+        process.env.SMS_SENDER || "";
+      const route =
+        process.env.SMS_ROUTE || "2";
+      const country =
+        process.env.SMS_COUNTRY || "91";
+
+      if (!baseUrl || !authKey || !sender) {
+        return "ERROR:SMS config missing";
+      }
+
+      const URI = baseUrl.endsWith("?")
+        ? baseUrl
+        : `${baseUrl}?`;
+
       let myParameters =
-        "authkey=32366861726d6138333698&sender=HALTN&route=2&country=91&DLT_TE_ID=" +
+        "authkey=" +
+        authKey +
+        "&sender=" +
+        sender +
+        "&route=" +
+        route +
+        "&country=" +
+        country +
+        "&DLT_TE_ID=" +
         templateID +
         "&";
 

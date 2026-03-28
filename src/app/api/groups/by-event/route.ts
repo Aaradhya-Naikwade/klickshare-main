@@ -75,6 +75,7 @@ import { connectDB } from "@/lib/db";
 import { verifyAuth } from "@/lib/auth-verify";
 
 import Group from "@/models/Group";
+import Event from "@/models/Event";
 
 export async function GET(req: Request) {
   try {
@@ -124,6 +125,28 @@ export async function GET(req: Request) {
       }).sort({
         createdAt: -1,
       });
+
+    const event =
+      await Event.findById(eventId).select(
+        "ownerId"
+      );
+
+    if (!event) {
+      return NextResponse.json(
+        { error: "Event not found" },
+        { status: 404 }
+      );
+    }
+
+    if (
+      event.ownerId.toString() !==
+      decoded.userId
+    ) {
+      return NextResponse.json(
+        { error: "Access denied" },
+        { status: 403 }
+      );
+    }
 
     // ✅ SAFE RESPONSE
     const safeGroups = groups.map(

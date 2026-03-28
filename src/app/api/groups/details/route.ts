@@ -165,6 +165,24 @@ export async function GET(req: Request) {
       );
     }
 
+    const membership =
+      await GroupMember.findOne({
+        groupId,
+        userId: decoded.userId,
+        status: "approved",
+      });
+
+    const isOwner =
+      group.ownerId.toString() ===
+      decoded.userId;
+
+    if (!membership && !isOwner) {
+      return NextResponse.json(
+        { error: "Access denied" },
+        { status: 403 }
+      );
+    }
+
     // ✅ Members (including blocked/pending/approved)
     const members =
       await GroupMember.find({
@@ -192,8 +210,12 @@ export async function GET(req: Request) {
       name: group.name,
       description: group.description || "",
       visibility: group.visibility,
-      inviteCode: group.inviteCode,
-      qrCodeUrl: group.qrCodeUrl,
+      inviteCode: isOwner
+        ? group.inviteCode
+        : undefined,
+      qrCodeUrl: isOwner
+        ? group.qrCodeUrl
+        : undefined,
       eventId: group.eventId,
       ownerId: group.ownerId,
       createdAt: group.createdAt,
