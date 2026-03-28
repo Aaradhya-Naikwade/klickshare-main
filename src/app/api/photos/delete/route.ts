@@ -10,6 +10,7 @@ import {
 import Photo from "@/models/Photo";
 import GroupMember from "@/models/GroupMember";
 import Group from "@/models/Group";
+import User from "@/models/User";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,24 @@ export async function DELETE(req: Request) {
       return NextResponse.json(
         { error: "Photo not found" },
         { status: 404 }
+      );
+    }
+
+    const user = await User.findById(auth.userId).select(
+      "role"
+    );
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    if (user.role !== "photographer") {
+      return NextResponse.json(
+        { error: "Delete not allowed" },
+        { status: 403 }
       );
     }
 
@@ -102,4 +121,3 @@ export async function DELETE(req: Request) {
     );
   }
 }
-

@@ -579,6 +579,39 @@ or
   - `404`: Photo not found
   - `500`: Delete failed
 
+### 7.6 Bulk Delete Photos
+- Method: `POST`
+- Path: `/api/photos/bulk-delete`
+- Auth: Yes
+- Body:
+```json
+{ "photoIds": ["...", "..."] }
+```
+- Access rules:
+  - Only photographers can delete
+  - Group owner can delete any photo in the group
+  - Photo uploader can delete their own photo
+- Behavior:
+  - Deletes each allowed photo from S3
+  - Deletes each allowed photo record from DB
+  - Returns lists of deleted and failed IDs
+- Success `200`:
+```json
+{
+  "success": true,
+  "deletedCount": 2,
+  "deleted": ["...", "..."],
+  "failedCount": 1,
+  "failed": [{ "id": "...", "reason": "Access denied" }]
+}
+```
+- Error cases:
+  - `400`: Photo IDs required
+  - `401`: Unauthorized
+  - `403`: Delete not allowed
+  - `404`: Photos not found
+  - `500`: Bulk delete failed
+
 
 ---
 
