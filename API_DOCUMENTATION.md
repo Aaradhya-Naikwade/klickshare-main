@@ -467,6 +467,8 @@ or
   - Role must be `owner` or `contributor`
 - Quota:
   - Uploads are limited by the user's yearly plan quota.
+  - Usage is counted across the current yearly billing cycle.
+  - Changing plan during the same yearly cycle updates quota, but does not reset used photo count.
   - When exceeded, returns `403` with remaining/quota info.
 - Success `200`:
 ```json
@@ -791,6 +793,10 @@ Some non-error business cases return `200` with `message` (example: already join
   }
 }
 ```
+- Billing behavior:
+  - `used` counts uploads in the current yearly billing cycle.
+  - Upgrading or downgrading plan during that cycle changes `quota`, but does not reset `used`.
+  - A new yearly cycle resets usage.
 - Error cases:
   - `401`: Unauthorized
   - `500`: Failed to fetch status
@@ -812,6 +818,9 @@ Some non-error business cases return `200` with `message` (example: already join
   "keyId": "<razorpay_key_id>"
 }
 ```
+- Behavior:
+  - If the same plan already has a pending local order, that existing order is returned.
+  - Older pending plan orders are canceled only after the replacement order and local payment row are created successfully.
 - Error cases:
   - `400`: Invalid plan
   - `401`: Unauthorized
@@ -834,6 +843,10 @@ Some non-error business cases return `200` with `message` (example: already join
 ```json
 { "success": true }
 ```
+- Behavior:
+  - Signature is verified against the client callback payload.
+  - A payment marked `canceled` or `failed` locally will not be revived into `paid`.
+  - After a payment becomes `paid`, the backend syncs the active plan to the latest successful payment for that user.
 - Error cases:
   - `400`: Invalid plan or signature
   - `401`: Unauthorized
@@ -846,7 +859,9 @@ Some non-error business cases return `200` with `message` (example: already join
 - Auth: No (webhook signature required)
 - Notes:
   - Handles `payment.captured`
-  - Activates the purchased plan
+  - Logs webhook payloads to payment event history
+  - Does not revive payments that were already marked `canceled` or `failed` locally
+  - Syncs the user's active plan to the latest successful payment after capture
 
 ### 12.5 Transactions
 - Method: `GET`
@@ -856,6 +871,7 @@ Some non-error business cases return `200` with `message` (example: already join
 ```json
 {
   "success": true,
+  "keyId": "<razorpay_key_id>",
   "payments": [
     {
       "_id": "...",
@@ -865,6 +881,9 @@ Some non-error business cases return `200` with `message` (example: already join
       "status": "paid",
       "razorpayOrderId": "order_XXXX",
       "razorpayPaymentId": "pay_XXXX",
+      "orderAmount": 70000,
+      "orderCurrency": "INR",
+      "canceledAt": null,
       "createdAt": "2026-03-27T00:00:00.000Z"
     }
   ]
@@ -873,3 +892,25 @@ Some non-error business cases return `200` with `message` (example: already join
 - Error cases:
   - `401`: Unauthorized
   - `500`: Failed to fetch payments
+
+### 12.6 Cancel Pending Payment
+- Method: `POST`
+- Path: `/api/billing/cancel`
+- Auth: Yes
+- Body:
+```json
+{ "orderId": "order_XXXX" }
+```
+- Behavior:
+  - Marks a pending payment as `canceled`
+  - Does not affect a paid payment
+  - Prevents later local activation of that payment if a delayed capture callback arrives
+- Success `200`:
+```json
+{ "success": true }
+```
+- Error cases:
+  - `400`: Order ID required / Payment already paid
+  - `401`: Unauthorized
+  - `404`: Payment not found
+  - `500`: Cancel failed

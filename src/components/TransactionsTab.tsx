@@ -34,9 +34,16 @@ type Payment = {
   planKey: string;
   amount: number;
   currency: string;
-  status: "pending" | "paid" | "failed";
+  status:
+    | "pending"
+    | "paid"
+    | "failed"
+    | "canceled";
   razorpayOrderId: string;
   razorpayPaymentId: string;
+  orderAmount?: number;
+  orderCurrency?: string;
+  canceledAt?: string | null;
   createdAt: string;
 };
 
@@ -53,6 +60,8 @@ export default function TransactionsTab() {
     useState<PlanStatus | null>(null);
   const [payments, setPayments] =
     useState<Payment[]>([]);
+  const [razorpayKeyId, setRazorpayKeyId] =
+    useState("");
   const [loading, setLoading] =
     useState(true);
   const [error, setError] =
@@ -62,13 +71,18 @@ export default function TransactionsTab() {
 
   const token = getToken();
 
-  async function loadAll() {
+  async function loadAll(showLoader = true) {
     try {
-      setLoading(true);
+      if (showLoader) {
+        setLoading(true);
+      }
       setError("");
 
       const plansRes = await fetch(
-        "/api/billing/plans"
+        "/api/billing/plans",
+        {
+          cache: "no-store",
+        }
       );
       const plansData =
         await plansRes.json();
@@ -88,11 +102,13 @@ export default function TransactionsTab() {
       const [statusRes, txRes] =
         await Promise.all([
           fetch("/api/billing/status", {
+            cache: "no-store",
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }),
           fetch("/api/billing/transactions", {
+            cache: "no-store",
             headers: {
               Authorization: `Bearer ${token}`,
             },
@@ -119,6 +135,7 @@ export default function TransactionsTab() {
 
       setStatus(statusData.status);
       setPayments(txData.payments || []);
+      setRazorpayKeyId(txData.keyId || "");
     } catch (err: any) {
       setError(
         err.message ||
@@ -132,6 +149,28 @@ export default function TransactionsTab() {
   useEffect(() => {
     loadAll();
   }, []);
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    const hasPendingPayment = payments.some(
+      (payment) => payment.status === "pending"
+    );
+
+    const intervalMs = hasPendingPayment
+      ? 3000
+      : 15000;
+
+    const interval = window.setInterval(() => {
+      loadAll(false);
+    }, intervalMs);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [token, payments]);
 
   function formatDate(d: string) {
     return new Date(d).toLocaleDateString();
@@ -268,6 +307,131 @@ export default function TransactionsTab() {
     }
   }
 
+  async function retryPayment(p: Payment) {
+    if (!token) {
+      setError("Please login");
+      return;
+    }
+
+    if (!razorpayKeyId) {
+      setError("Razorpay key missing");
+      return;
+    }
+
+    setPaying(p._id);
+    setError("");
+
+    try {
+      const ok = await ensureRazorpay();
+      if (!ok) {
+        throw new Error(
+          "Unable to load Razorpay"
+        );
+      }
+
+      const rzp = new window.Razorpay({
+        key: razorpayKeyId,
+        amount:
+          p.orderAmount && p.orderAmount > 0
+            ? p.orderAmount
+            : p.amount * 100,
+        currency: p.orderCurrency || p.currency || "INR",
+        name: "Klickshare",
+        description: "Retry Payment",
+        order_id: p.razorpayOrderId,
+        handler: async (response: any) => {
+          try {
+            const verifyRes = await fetch(
+              "/api/billing/verify",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type":
+                    "application/json",
+                  Authorization:
+                    `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                  planKey: p.planKey,
+                  razorpay_order_id:
+                    response.razorpay_order_id,
+                  razorpay_payment_id:
+                    response.razorpay_payment_id,
+                  razorpay_signature:
+                    response.razorpay_signature,
+                }),
+              }
+            );
+
+            const verifyData =
+              await verifyRes.json();
+
+            if (!verifyRes.ok) {
+              throw new Error(
+                verifyData.error ||
+                "Payment verification failed"
+              );
+            }
+
+            await loadAll();
+          } catch (err: any) {
+            setError(
+              err.message ||
+              "Payment verification failed"
+            );
+          } finally {
+            setPaying(null);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPaying(null);
+          },
+        },
+        theme: {
+          color: "#0f766e",
+        },
+      });
+
+      rzp.open();
+    } catch (err: any) {
+      setError(
+        err.message || "Payment failed"
+      );
+      setPaying(null);
+    } finally {
+      if (!window.Razorpay) {
+        setPaying(null);
+      }
+    }
+  }
+
+  async function cancelPayment(p: Payment) {
+    if (!token) return;
+    const confirmed = window.confirm(
+      "Cancel this pending payment?"
+    );
+    if (!confirmed) return;
+
+    const res = await fetch(
+      "/api/billing/cancel",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          orderId: p.razorpayOrderId,
+        }),
+      }
+    );
+
+    if (!res.ok) return;
+    await loadAll();
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-24">
@@ -304,7 +468,9 @@ export default function TransactionsTab() {
         </div>
 
         <button
-          onClick={loadAll}
+          onClick={() => {
+            void loadAll();
+          }}
           className="
             bg-[#e0f2f1]
             hover:bg-[#ccebea]
@@ -452,10 +618,32 @@ export default function TransactionsTab() {
                       <XCircle className="w-4 h-4" />
                       Failed
                     </div>
+                  ) : p.status === "canceled" ? (
+                    <div className="flex items-center gap-1 text-gray-500 text-xs font-medium">
+                      <XCircle className="w-4 h-4" />
+                      Canceled
+                    </div>
                   ) : (
-                    <div className="flex items-center gap-1 text-yellow-600 text-xs font-medium">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Pending
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-yellow-600 text-xs font-medium">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Pending
+                      </div>
+                      <button
+                        onClick={() => retryPayment(p)}
+                        disabled={paying === p._id}
+                        className="text-xs px-3 py-1 rounded-lg border border-[#0f766e] text-[#0f766e] hover:bg-[#e0f2f1]"
+                      >
+                        {paying === p._id
+                          ? "Processing..."
+                          : "Retry"}
+                      </button>
+                      <button
+                        onClick={() => cancelPayment(p)}
+                        className="text-xs px-3 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   )}
                 </div>

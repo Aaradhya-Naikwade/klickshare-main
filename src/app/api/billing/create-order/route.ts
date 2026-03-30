@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import { requireApiAuth } from "@/lib/api-auth";
 import { getRazorpay } from "@/lib/razorpay";
 import { getPlanByKey, isPlanKey } from "@/lib/plans";
+import { getPlanStatus } from "@/lib/subscription";
 
 import Payment from "@/models/Payment";
 import User from "@/models/User";
@@ -66,6 +67,39 @@ export async function POST(
       );
     }
 
+    const currentStatus =
+      await getPlanStatus(auth.userId);
+
+    if (currentStatus.planKey === planKey) {
+      return NextResponse.json(
+        {
+          error:
+            "This plan is already active on your account",
+        },
+        { status: 400 }
+      );
+    }
+
+    const existingPendingPayment =
+      await Payment.findOne({
+        userId: auth.userId,
+        planKey,
+        status: "pending",
+      }).sort({ createdAt: -1 });
+
+    if (existingPendingPayment) {
+      return NextResponse.json({
+        orderId:
+          existingPendingPayment.razorpayOrderId,
+        amount:
+          existingPendingPayment.orderAmount,
+        currency:
+          existingPendingPayment.orderCurrency ||
+          "INR",
+        keyId: process.env.RAZORPAY_KEY_ID,
+      });
+    }
+
     if (
       !process.env.RAZORPAY_KEY_ID ||
       !process.env.RAZORPAY_KEY_SECRET
@@ -97,7 +131,7 @@ export async function POST(
       },
     });
 
-    await Payment.create({
+    const createdPayment = await Payment.create({
       userId: auth.userId,
       planKey,
       amount: plan.priceInr,
@@ -115,6 +149,27 @@ export async function POST(
       ],
       razorpayOrderId: order.id,
     });
+
+    await Payment.updateMany(
+      {
+        userId: auth.userId,
+        status: "pending",
+        _id: { $ne: createdPayment._id },
+      },
+      {
+        $set: {
+          status: "canceled",
+          canceledAt: new Date(),
+        },
+        $push: {
+          statusHistory: {
+            status: "canceled",
+            source: "superseded",
+            at: new Date(),
+          },
+        },
+      }
+    );
 
     return NextResponse.json({
       orderId: order.id,

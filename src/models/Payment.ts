@@ -46,7 +46,7 @@ const PaymentSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "paid", "failed"],
+      enum: ["pending", "paid", "failed", "canceled"],
       default: "pending",
       index: true,
     },
@@ -56,7 +56,12 @@ const PaymentSchema = new mongoose.Schema(
         {
           status: {
             type: String,
-            enum: ["pending", "paid", "failed"],
+            enum: [
+              "pending",
+              "paid",
+              "failed",
+              "canceled",
+            ],
             required: true,
           },
           source: {
@@ -96,6 +101,28 @@ const PaymentSchema = new mongoose.Schema(
     lastWebhookAt: {
       type: Date,
       default: null,
+    },
+
+    paidAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
+    canceledAt: {
+      type: Date,
+      default: null,
+    },
+
+    planActivatedAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+
+    planActivatedSource: {
+      type: String,
+      default: "",
     },
   },
   {

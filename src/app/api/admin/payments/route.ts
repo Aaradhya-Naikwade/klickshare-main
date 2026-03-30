@@ -27,11 +27,12 @@ export async function GET(req: Request) {
         ? Math.min(limitParam, 200)
         : 50;
 
-    const query: any = {};
+    const query: Record<string, string> = {};
     if (
       status === "pending" ||
       status === "paid" ||
-      status === "failed"
+      status === "failed" ||
+      status === "canceled"
     ) {
       query.status = status;
     }
@@ -92,4 +93,3 @@ export async function GET(req: Request) {
     );
   }
 }
-

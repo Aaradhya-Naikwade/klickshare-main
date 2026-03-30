@@ -23,11 +23,16 @@ export async function ensureActivePlan(
 ) {
   const now = new Date();
 
-  let activePlan = await UserPlan.findOne({
-    userId,
-    status: "active",
-    planEnd: { $gt: now },
-  }).sort({ planEnd: -1 });
+  async function findCurrentActivePlan() {
+    return UserPlan.findOne({
+      userId,
+      status: "active",
+      planEnd: { $gt: now },
+    }).sort({ planEnd: -1 });
+  }
+
+  let activePlan =
+    await findCurrentActivePlan();
 
   if (activePlan) {
     if (!isPlanKey(activePlan.planKey)) {
@@ -46,15 +51,33 @@ export async function ensureActivePlan(
   const freeQuota =
     freePlanDoc?.quota ?? getPlan("free").quota;
 
-  activePlan = await UserPlan.create({
-    userId,
-    planKey: "free",
-    planStart,
-    planEnd,
-    status: "active",
-    priceInr: freePrice,
-    planQuota: freeQuota,
-  });
+  try {
+    activePlan = await UserPlan.create({
+      userId,
+      planKey: "free",
+      planStart,
+      planEnd,
+      status: "active",
+      priceInr: freePrice,
+      planQuota: freeQuota,
+    });
+  } catch (error: unknown) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
+    ) {
+      const existingPlan =
+        await findCurrentActivePlan();
+
+      if (existingPlan) {
+        return existingPlan;
+      }
+    }
+
+    throw error;
+  }
 
   return activePlan;
 }
@@ -149,36 +172,57 @@ export async function activatePaidPlan(
   userId: string,
   planKey: PlanKey,
   priceInr: number,
-  planQuota?: number
+  planQuota?: number,
+  sourcePaymentId?: string
 ) {
   const now = new Date();
-
-  await UserPlan.updateMany(
-    {
+  const effectiveQuota =
+    typeof planQuota === "number"
+      ? planQuota
+      : 0;
+  const currentActivePlan =
+    await UserPlan.findOne({
       userId,
       status: "active",
-    },
-    {
-      status: "expired",
-      planEnd: now,
+      planEnd: { $gt: now },
+    }).sort({ planEnd: -1 });
+
+  if (sourcePaymentId) {
+    const activePlanForPayment =
+      await UserPlan.findOne({
+        sourcePaymentId,
+        status: "active",
+        planEnd: { $gt: now },
+      });
+
+    if (activePlanForPayment) {
+      return activePlanForPayment;
     }
-  );
+  }
+
+  if (currentActivePlan) {
+    currentActivePlan.planKey = planKey;
+    currentActivePlan.priceInr = priceInr;
+    currentActivePlan.planQuota = effectiveQuota;
+    currentActivePlan.sourcePaymentId =
+      sourcePaymentId || null;
+
+    await currentActivePlan.save();
+    return currentActivePlan;
+  }
 
   const planStart = now;
   const planEnd = addYears(planStart, 1);
 
-  const newPlan = await UserPlan.create({
+  return UserPlan.create({
     userId,
     planKey,
     planStart,
     planEnd,
     status: "active",
     priceInr,
-    planQuota:
-      typeof planQuota === "number"
-        ? planQuota
-        : 0,
+    planQuota: effectiveQuota,
+    sourcePaymentId:
+      sourcePaymentId || null,
   });
-
-  return newPlan;
 }

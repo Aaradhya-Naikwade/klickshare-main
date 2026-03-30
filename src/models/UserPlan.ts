@@ -41,6 +41,13 @@ const UserPlanSchema = new mongoose.Schema(
       default: 0,
     },
 
+    sourcePaymentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Payment",
+      default: null,
+      index: true,
+    },
+
     status: {
       type: String,
       enum: ["active", "expired", "canceled"],
@@ -64,6 +71,15 @@ UserPlanSchema.index(
     unique: true,
     partialFilterExpression: { status: "active" },
     name: "user_single_active_idx",
+  }
+);
+
+UserPlanSchema.index(
+  { sourcePaymentId: 1 },
+  {
+    unique: true,
+    sparse: true,
+    name: "user_plan_source_payment_idx",
   }
 );
 

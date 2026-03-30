@@ -2,14 +2,50 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 import { connectDB } from "@/lib/db";
-import { activatePaidPlan } from "@/lib/subscription";
-import { getPlanByKey, isPlanKey } from "@/lib/plans";
-import { getRazorpay } from "@/lib/razorpay";
+import { finalizePaidPayment } from "@/lib/billing";
 import PaymentEvent from "@/models/PaymentEvent";
 
 import Payment from "@/models/Payment";
 
 export const runtime = "nodejs";
+
+type RazorpayWebhookEvent = {
+  event?: string;
+  payload?: {
+    payment?: {
+      entity?: {
+        id?: string;
+        order_id?: string;
+      };
+    };
+    order?: {
+      entity?: {
+        id?: string;
+      };
+    };
+  };
+};
+
+function getErrorStatus(message: string) {
+  if (
+    message === "Payment not found"
+  ) {
+    return 404;
+  }
+
+  if (
+    message === "Invalid plan" ||
+    message === "Order amount mismatch" ||
+    message === "Order currency mismatch" ||
+    message === "Payment not captured" ||
+    message === "Payment canceled" ||
+    message === "Payment failed"
+  ) {
+    return 400;
+  }
+
+  return 500;
+}
 
 function verifyWebhookSignature(
   body: string,
@@ -46,7 +82,8 @@ export async function POST(
       headersObj[key] = value;
     });
 
-    let event: any = null;
+    let event: RazorpayWebhookEvent | null =
+      null;
     try {
       event = JSON.parse(rawBody);
     } catch {
@@ -129,19 +166,17 @@ export async function POST(
       );
     }
 
-    const shouldVerifyOrder =
-      process.env.RAZORPAY_VERIFY_ORDER !==
-      "0";
-
     payment.lastWebhookEvent =
       eventType || "";
     payment.lastWebhookAt = new Date();
 
     const wasPaid = payment.status === "paid";
-    const wasFailed = payment.status === "failed";
+    const wasClosed =
+      payment.status === "failed" ||
+      payment.status === "canceled";
 
     if (eventType === "payment.failed") {
-      if (!wasPaid && !wasFailed) {
+      if (!wasPaid && !wasClosed) {
         payment.status = "failed";
         (payment.statusHistory ||= []).push({
           status: "failed",
@@ -153,80 +188,27 @@ export async function POST(
       return NextResponse.json({ success: true });
     }
 
-    if (shouldVerifyOrder) {
-      const razorpay = getRazorpay();
-      const order = await razorpay.orders.fetch(
-        orderId
-      );
-
-      if (
-        typeof order?.amount === "number" &&
-        payment.orderAmount > 0 &&
-        order.amount !== payment.orderAmount
-      ) {
-        return NextResponse.json(
-          { error: "Order amount mismatch" },
-          { status: 400 }
-        );
-      }
-
-      if (
-        order?.currency &&
-        payment.orderCurrency &&
-        order.currency !== payment.orderCurrency
-      ) {
-        return NextResponse.json(
-          { error: "Order currency mismatch" },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (!wasPaid) {
-      payment.status = "paid";
-      payment.razorpayPaymentId =
-        paymentId;
-      (payment.statusHistory ||= []).push({
-        status: "paid",
-        source: "webhook",
-        at: new Date(),
-      });
-    }
-
     await payment.save();
 
-    if (!wasPaid) {
-      if (!isPlanKey(payment.planKey)) {
-        return NextResponse.json(
-          { error: "Invalid plan" },
-          { status: 400 }
-        );
-      }
-
-      const planDoc = await getPlanByKey(
-        payment.planKey
-      );
-      const planQuota =
-        payment.planQuota > 0
-          ? payment.planQuota
-          : planDoc?.quota;
-
-      await activatePaidPlan(
-        payment.userId.toString(),
-        payment.planKey,
-        payment.amount,
-        planQuota
-      );
-    }
+    await finalizePaidPayment({
+      payment,
+      source: "webhook",
+      razorpayPaymentId: paymentId,
+      skipCaptureCheck: true,
+    });
 
     return NextResponse.json({
       success: true,
     });
   } catch (error) {
     console.error(error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Webhook failed";
     return NextResponse.json(
-      { error: "Webhook failed" },
-      { status: 500 }
+      { error: message },
+      { status: getErrorStatus(message) }
     );
   }
 }

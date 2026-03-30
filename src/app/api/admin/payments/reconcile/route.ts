@@ -3,12 +3,16 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { requireAdminAuth } from "@/lib/admin-auth";
 import { getRazorpay } from "@/lib/razorpay";
-import { activatePaidPlan } from "@/lib/subscription";
-import { getPlanByKey, isPlanKey } from "@/lib/plans";
+import { finalizePaidPayment } from "@/lib/billing";
 
 import Payment from "@/models/Payment";
 
 export const runtime = "nodejs";
+
+type RazorpayPaymentSummary = {
+  id?: string;
+  status?: string;
+};
 
 export async function POST(req: Request) {
   try {
@@ -52,40 +56,22 @@ export async function POST(req: Request) {
         );
         const items = list?.items || [];
         const captured = items.find(
-          (p: any) => p.status === "captured"
+          (p: RazorpayPaymentSummary) =>
+            p.status === "captured"
         );
 
         if (!captured) continue;
 
-        payment.status = "paid";
-        payment.razorpayPaymentId = captured.id || "";
         payment.lastWebhookEvent = "reconcile";
         payment.lastWebhookAt = new Date();
-        (payment.statusHistory ||= []).push({
-          status: "paid",
-          source: "reconcile",
-          at: new Date(),
-        });
         await payment.save();
 
-        if (!isPlanKey(payment.planKey)) {
-          continue;
-        }
-
-        const planDoc = await getPlanByKey(
-          payment.planKey
-        );
-        const planQuota =
-          payment.planQuota > 0
-            ? payment.planQuota
-            : planDoc?.quota;
-
-        await activatePaidPlan(
-          payment.userId.toString(),
-          payment.planKey,
-          payment.amount,
-          planQuota
-        );
+        await finalizePaidPayment({
+          payment,
+          source: "reconcile",
+          razorpayPaymentId:
+            captured.id || "",
+        });
 
         reconciled += 1;
       } catch (err) {

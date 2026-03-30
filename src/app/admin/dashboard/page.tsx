@@ -29,7 +29,11 @@ type PaymentItem = {
   planKey: string;
   amount: number;
   currency: string;
-  status: "pending" | "paid" | "failed";
+  status:
+    | "pending"
+    | "paid"
+    | "failed"
+    | "canceled";
   razorpayOrderId: string;
   razorpayPaymentId: string;
   createdAt: string;
@@ -83,7 +87,7 @@ export default function AdminDashboardPage() {
   );
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState<
-    "all" | "pending" | "paid" | "failed"
+    "all" | "pending" | "paid" | "failed" | "canceled"
   >("all");
 
   async function loadPlans() {
@@ -456,6 +460,7 @@ export default function AdminDashboardPage() {
                   <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
                   <option value="failed">Failed</option>
+                  <option value="canceled">Canceled</option>
                 </select>
                 <button
                   onClick={fetchPayments}
@@ -497,6 +502,8 @@ export default function AdminDashboardPage() {
                                   ? "bg-green-100 text-green-700"
                                   : p.status === "failed"
                                   ? "bg-red-100 text-red-700"
+                                  : p.status === "canceled"
+                                  ? "bg-gray-100 text-gray-600"
                                   : "bg-yellow-100 text-yellow-700"
                               }`}
                             >

@@ -3,13 +3,33 @@ import crypto from "crypto";
 
 import { connectDB } from "@/lib/db";
 import { requireApiAuth } from "@/lib/api-auth";
-import { getPlanByKey, isPlanKey } from "@/lib/plans";
-import { activatePaidPlan } from "@/lib/subscription";
-import { getRazorpay } from "@/lib/razorpay";
+import { isPlanKey } from "@/lib/plans";
+import { finalizePaidPayment } from "@/lib/billing";
 
 import Payment from "@/models/Payment";
 
 export const runtime = "nodejs";
+
+function getErrorStatus(message: string) {
+  if (
+    message === "Payment not found"
+  ) {
+    return 404;
+  }
+
+  if (
+    message === "Invalid plan" ||
+    message === "Order amount mismatch" ||
+    message === "Order currency mismatch" ||
+    message === "Payment not captured" ||
+    message === "Payment canceled" ||
+    message === "Payment failed"
+  ) {
+    return 400;
+  }
+
+  return 500;
+}
 
 function verifySignature(
   orderId: string,
@@ -93,10 +113,6 @@ export async function POST(
       );
     }
 
-    const shouldVerifyOrder =
-      process.env.RAZORPAY_VERIFY_ORDER !==
-      "0";
-
     const payment =
       await Payment.findOne({
         razorpayOrderId:
@@ -118,83 +134,28 @@ export async function POST(
       );
     }
 
-    if (shouldVerifyOrder) {
-      const razorpay = getRazorpay();
-      const order = await razorpay.orders.fetch(
-        razorpay_order_id
-      );
-
-      if (
-        typeof order?.amount === "number" &&
-        payment.orderAmount > 0 &&
-        order.amount !== payment.orderAmount
-      ) {
-        return NextResponse.json(
-          { error: "Order amount mismatch" },
-          { status: 400 }
-        );
-      }
-
-      if (
-        order?.currency &&
-        payment.orderCurrency &&
-        order.currency !== payment.orderCurrency
-      ) {
-        return NextResponse.json(
-          { error: "Order currency mismatch" },
-          { status: 400 }
-        );
-      }
-
-      if (
-        typeof order?.amount_paid ===
-          "number" &&
-        typeof order?.amount ===
-          "number" &&
-        order.amount_paid < order.amount
-      ) {
-        return NextResponse.json(
-          { error: "Payment not captured" },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (payment.status !== "paid") {
-      payment.razorpayPaymentId =
-        razorpay_payment_id;
-      payment.razorpaySignature =
-        razorpay_signature;
-      payment.status = "paid";
-      (payment.statusHistory ||= []).push({
-        status: "paid",
-        source: "verify",
-        at: new Date(),
-      });
-      await payment.save();
-
-      const planDoc = await getPlanByKey(planKey);
-      const planQuota =
-        payment.planQuota > 0
-          ? payment.planQuota
-          : planDoc?.quota;
-
-      await activatePaidPlan(
-        auth.userId,
-        planKey,
-        payment.amount,
-        planQuota
-      );
-    }
+    await finalizePaidPayment({
+      payment,
+      source: "verify",
+      razorpayPaymentId:
+        razorpay_payment_id,
+      razorpaySignature:
+        razorpay_signature,
+    });
 
     return NextResponse.json({
       success: true,
+      status: "paid",
     });
   } catch (error) {
     console.error(error);
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Verification failed";
     return NextResponse.json(
-      { error: "Verification failed" },
-      { status: 500 }
+      { error: message },
+      { status: getErrorStatus(message) }
     );
   }
 }
