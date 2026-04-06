@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { getToken } from "@/lib/auth";
 
 import {
-  CreditCard,
-  RefreshCw,
   CheckCircle2,
   XCircle,
   Loader2,
-  CalendarDays,
-  Receipt,
+  WalletCards,
+  CreditCard,
+  ArrowUpRight,
+  X,
 } from "lucide-react";
 
 type Plan = {
@@ -18,15 +18,6 @@ type Plan = {
   label: string;
   priceInr: number;
   quota: number;
-};
-
-type PlanStatus = {
-  planKey: string;
-  planStart: string;
-  planEnd: string;
-  quota: number;
-  used: number;
-  remaining: number;
 };
 
 type Payment = {
@@ -56,8 +47,8 @@ declare global {
 export default function TransactionsTab() {
   const [plans, setPlans] =
     useState<Plan[]>([]);
-  const [status, setStatus] =
-    useState<PlanStatus | null>(null);
+  const [currentPlanKey, setCurrentPlanKey] =
+    useState<string | null>(null);
   const [payments, setPayments] =
     useState<Payment[]>([]);
   const [razorpayKeyId, setRazorpayKeyId] =
@@ -68,6 +59,8 @@ export default function TransactionsTab() {
     useState("");
   const [paying, setPaying] =
     useState<string | null>(null);
+  const [showPlansModal, setShowPlansModal] =
+    useState(false);
 
   const token = getToken();
 
@@ -99,47 +92,55 @@ export default function TransactionsTab() {
         throw new Error("Please login");
       }
 
-      const [statusRes, txRes] =
-        await Promise.all([
-          fetch("/api/billing/status", {
-            cache: "no-store",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-          fetch("/api/billing/transactions", {
-            cache: "no-store",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }),
-        ]);
+      const statusRes = await fetch(
+        "/api/billing/status",
+        {
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       const statusData =
         await statusRes.json();
-      const txData = await txRes.json();
 
       if (!statusRes.ok) {
         throw new Error(
           statusData.error ||
-          "Failed to load plan status"
+            "Failed to load plan status"
         );
       }
+
+      setCurrentPlanKey(
+        statusData.status?.planKey || null
+      );
+
+      const txRes = await fetch(
+        "/api/billing/transactions",
+        {
+          cache: "no-store",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const txData = await txRes.json();
 
       if (!txRes.ok) {
         throw new Error(
           txData.error ||
-          "Failed to load transactions"
+            "Failed to load transactions"
         );
       }
 
-      setStatus(statusData.status);
       setPayments(txData.payments || []);
       setRazorpayKeyId(txData.keyId || "");
     } catch (err: any) {
       setError(
         err.message ||
-        "Something went wrong"
+          "Something went wrong"
       );
     } finally {
       setLoading(false);
@@ -147,7 +148,7 @@ export default function TransactionsTab() {
   }
 
   useEffect(() => {
-    loadAll();
+    void loadAll();
   }, []);
 
   useEffect(() => {
@@ -164,7 +165,7 @@ export default function TransactionsTab() {
       : 15000;
 
     const interval = window.setInterval(() => {
-      loadAll(false);
+      void loadAll(false);
     }, intervalMs);
 
     return () => {
@@ -172,8 +173,21 @@ export default function TransactionsTab() {
     };
   }, [token, payments]);
 
-  function formatDate(d: string) {
-    return new Date(d).toLocaleDateString();
+  function formatDateTime(d: string) {
+    return new Date(d).toLocaleString(
+      "en-IN",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      }
+    );
+  }
+
+  function formatCurrency(amount: number) {
+    return `Rs. ${amount}`;
   }
 
   function planLabel(key: string) {
@@ -181,6 +195,13 @@ export default function TransactionsTab() {
       plans.find((p) => p.key === key)
         ?.label || key
     );
+  }
+
+  function formatStatusLabel(
+    paymentStatus: Payment["status"]
+  ) {
+    return paymentStatus.charAt(0).toUpperCase() +
+      paymentStatus.slice(1);
   }
 
   async function ensureRazorpay() {
@@ -229,7 +250,7 @@ export default function TransactionsTab() {
       if (!res.ok) {
         throw new Error(
           data.error ||
-          "Order creation failed"
+            "Order creation failed"
         );
       }
 
@@ -270,15 +291,16 @@ export default function TransactionsTab() {
             if (!verifyRes.ok) {
               throw new Error(
                 verifyData.error ||
-                "Payment verification failed"
+                  "Payment verification failed"
               );
             }
 
+            setShowPlansModal(false);
             await loadAll();
           } catch (err: any) {
             setError(
               err.message ||
-              "Payment verification failed"
+                "Payment verification failed"
             );
           } finally {
             setPaying(null);
@@ -290,7 +312,7 @@ export default function TransactionsTab() {
           },
         },
         theme: {
-          color: "#0f766e",
+          color: "#1f6563",
         },
       });
 
@@ -335,7 +357,8 @@ export default function TransactionsTab() {
           p.orderAmount && p.orderAmount > 0
             ? p.orderAmount
             : p.amount * 100,
-        currency: p.orderCurrency || p.currency || "INR",
+        currency:
+          p.orderCurrency || p.currency || "INR",
         name: "Klickshare",
         description: "Retry Payment",
         order_id: p.razorpayOrderId,
@@ -369,7 +392,7 @@ export default function TransactionsTab() {
             if (!verifyRes.ok) {
               throw new Error(
                 verifyData.error ||
-                "Payment verification failed"
+                  "Payment verification failed"
               );
             }
 
@@ -377,7 +400,7 @@ export default function TransactionsTab() {
           } catch (err: any) {
             setError(
               err.message ||
-              "Payment verification failed"
+                "Payment verification failed"
             );
           } finally {
             setPaying(null);
@@ -389,7 +412,7 @@ export default function TransactionsTab() {
           },
         },
         theme: {
-          color: "#0f766e",
+          color: "#1f6563",
         },
       });
 
@@ -435,8 +458,8 @@ export default function TransactionsTab() {
   if (loading) {
     return (
       <div className="flex justify-center py-24">
-        <div className="bg-white border border-[#b2dfdb] rounded-xl shadow-sm p-8 flex flex-col items-center">
-          <Loader2 className="w-8 h-8 text-[#0f766e] animate-spin mb-3" />
+        <div className="flex flex-col items-center rounded-xl border border-[#b2dfdb] bg-white p-8 shadow-sm">
+          <Loader2 className="mb-3 h-8 w-8 animate-spin text-[#1f6563]" />
           <div className="font-medium text-[#111827]">
             Loading transactions...
           </div>
@@ -447,205 +470,275 @@ export default function TransactionsTab() {
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg">
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-600">
         {error}
       </div>
     );
   }
 
+  const pendingPayments = payments.filter(
+    (payment) => payment.status === "pending"
+  ).length;
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-[#0f766e] flex items-center gap-2">
-            <Receipt className="w-6 h-6" />
-            Transactions
-          </h1>
-          <p className="text-sm text-[#6b7280] mt-1">
-            Manage your yearly plan and payment history
-          </p>
-        </div>
-
-        <button
-          onClick={() => {
-            void loadAll();
-          }}
-          className="
-            bg-[#e0f2f1]
-            hover:bg-[#ccebea]
-            text-[#0f766e]
-            px-4 py-2
-            rounded-lg
-            flex items-center gap-2
-            text-sm
-            border border-[#b2dfdb]
-          "
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-      </div>
-  
-      {/* Plan Status */}
-      {status && (
-        <div className="bg-white border border-[#b2dfdb] rounded-xl p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-4">
-            <CreditCard className="text-[#0f766e]" />
-            <div>
-              <div className="text-lg font-semibold text-[#111827]">
-                Current Plan: {planLabel(status.planKey)}
+    <div className="max-w-4xl space-y-6">
+      {showPlansModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+          <div className="w-full max-w-4xl rounded-[30px] border border-[#3cc2bf]/20 bg-white shadow-2xl">
+            <div className="flex items-start justify-between border-b border-[#3cc2bf]/15 px-6 py-5">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+                  Upgrade Plan
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Choose the plan that best fits your storage needs.
+                </p>
               </div>
-              <div className="text-sm text-[#6b7280] flex items-center gap-2">
-                <CalendarDays className="w-4 h-4" />
-                {formatDate(status.planStart)} -{" "}
-                {formatDate(status.planEnd)}
-              </div>
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-[#6b7280]">
-              <span>
-                Used {status.used} of {status.quota}
-              </span>
-              <span>{status.remaining} left</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setShowPlansModal(false)
+                }
+                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#3cc2bf]/20 text-[#1f6563] transition hover:bg-[#3cc2bf]/10"
+                aria-label="Close upgrade plans"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <div className="h-3 bg-[#e5e7eb] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#0f766e]"
-                style={{
-                  width: `${Math.min(
-                    100,
-                    (status.used / status.quota) * 100
-                  )}%`,
-                }}
-              />
+
+            <div className="max-h-[75vh] overflow-y-auto p-6">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {plans.map((plan) => {
+                  const isCurrent =
+                    currentPlanKey === plan.key;
+                  const isFree =
+                    plan.priceInr === 0;
+
+                  return (
+                    <div
+                      key={plan.key}
+                      className={`rounded-[26px] border p-5 shadow-sm transition ${
+                        isCurrent
+                          ? "border-[#1f6563]/30 bg-[#f5fbfb]"
+                          : "border-[#3cc2bf]/20 bg-white"
+                      }`}
+                    >
+                      <div className="text-lg font-semibold text-slate-900">
+                        {plan.label}
+                      </div>
+                      <div className="mt-1 text-sm text-slate-600">
+                        {plan.quota} photos / year
+                      </div>
+
+                      <div className="mt-5 text-3xl font-semibold tracking-tight text-[#1f6563]">
+                        {isFree
+                          ? "Free"
+                          : "Rs. " + plan.priceInr}
+                      </div>
+                      {!isFree && (
+                        <div className="mt-1 text-sm text-slate-500">
+                          billed yearly
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        disabled={
+                          isFree ||
+                          isCurrent ||
+                          paying === plan.key
+                        }
+                        onClick={() =>
+                          startPayment(plan.key)
+                        }
+                        className={`mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                          isCurrent
+                            ? "bg-[#e6f6f5] text-[#1f6563]"
+                            : isFree
+                              ? "cursor-not-allowed bg-slate-100 text-slate-400"
+                              : "bg-[#1f6563] text-white hover:bg-[#174d4b]"
+                        }`}
+                      >
+                        {isCurrent ? (
+                          "Current Plan"
+                        ) : paying === plan.key ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <ArrowUpRight className="h-4 w-4" />
+                            Upgrade Plan
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Plans */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {plans.map((plan) => {
-          const isFree = plan.priceInr === 0;
-          const isCurrent =
-            status?.planKey === plan.key;
+      <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white/95 p-6 shadow-[0_20px_60px_-30px_rgba(31,101,99,0.25)]">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight text-slate-900">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#3cc2bf]/12 text-[#1f6563]">
+                <WalletCards className="h-5 w-5" />
+              </span>
+              Transactions
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Review your billing activity and manage any pending payments.
+            </p>
+          </div>
 
-          return (
-            <div
-              key={plan.key}
-              className="bg-white border border-[#b2dfdb] rounded-xl p-6 shadow-sm"
-            >
-              <div className="text-lg font-semibold text-[#111827]">
-                {plan.label}
-              </div>
-              <div className="text-sm text-[#6b7280] mt-1">
-                {plan.quota} photos / year
-              </div>
-              <div className="text-2xl font-bold text-[#0f766e] mt-4">
-                {isFree
-                  ? "Free"
-                  : `₹${plan.priceInr}`}
-              </div>
+          <button
+            type="button"
+            onClick={() =>
+              setShowPlansModal(true)
+            }
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1f6563] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#174d4b]"
+          >
+            <CreditCard className="h-4 w-4" />
+            Plans
+          </button>
+        </div>
 
-              <button
-                disabled={isFree || isCurrent || paying === plan.key}
-                onClick={() =>
-                  startPayment(plan.key)
-                }
-                className={`
-                  mt-4 w-full py-2 rounded-lg text-sm font-medium
-                  ${isCurrent
-                    ? "bg-[#e0f2f1] text-[#0f766e] cursor-default"
-                    : isFree
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      : "bg-[#0f766e] hover:bg-[#0b5e58] text-white"
-                  }
-                `}
-              >
-                {isCurrent
-                  ? "Active Plan"
-                  : isFree
-                    ? "Included"
-                    : paying === plan.key
-                      ? "Processing..."
-                      : "Buy Yearly"}
-              </button>
+        <div className="mt-5 flex flex-wrap gap-3 border-t border-[#3cc2bf]/15 pt-5">
+          <div className="rounded-2xl bg-[#f8fcfc] px-4 py-3">
+            <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+              Records
             </div>
-          );
-        })}
+            <div className="mt-2 text-lg font-semibold text-slate-900">
+              {payments.length}
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-[#f8fcfc] px-4 py-3">
+            <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+              Pending
+            </div>
+            <div className="mt-2 text-lg font-semibold text-[#1f6563]">
+              {pendingPayments}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Transactions */}
-      <div className="bg-white border border-[#b2dfdb] rounded-xl p-6 shadow-sm">
-        <div className="text-lg font-semibold text-[#111827] mb-4">
-          Payment History
+      <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex flex-col gap-3 border-b border-[#3cc2bf]/15 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              Payment History
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Track completed, pending, failed, and canceled billing attempts.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-[#f8fcfc] px-4 py-3 text-sm font-medium text-slate-600">
+            {payments.length} record{payments.length === 1 ? "" : "s"}
+          </div>
         </div>
 
         {payments.length === 0 ? (
-          <div className="text-sm text-[#6b7280]">
-            No transactions yet.
+          <div className="rounded-[24px] border border-dashed border-[#3cc2bf]/25 bg-[#f8fcfc] px-5 py-12 text-center">
+            <div className="text-lg font-semibold text-slate-900">
+              No transactions yet
+            </div>
+            <div className="mt-2 text-sm text-slate-600">
+              Your payment activity will appear here once you purchase or renew a plan.
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
             {payments.map((p) => (
               <div
                 key={p._id}
-                className="flex items-center justify-between p-3 border border-[#e5e7eb] rounded-lg"
+                className="rounded-[24px] border border-[#3cc2bf]/15 bg-[#fcfefe] p-5"
               >
-                <div>
-                  <div className="text-sm font-medium text-[#111827]">
-                    {planLabel(p.planKey)}
-                  </div>
-                  <div className="text-xs text-[#6b7280]">
-                    {formatDate(p.createdAt)} • {p.razorpayOrderId}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="text-sm font-semibold text-[#111827]">
-                    ₹{p.amount}
-                  </div>
-                  {p.status === "paid" ? (
-                    <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Paid
-                    </div>
-                  ) : p.status === "failed" ? (
-                    <div className="flex items-center gap-1 text-red-600 text-xs font-medium">
-                      <XCircle className="w-4 h-4" />
-                      Failed
-                    </div>
-                  ) : p.status === "canceled" ? (
-                    <div className="flex items-center gap-1 text-gray-500 text-xs font-medium">
-                      <XCircle className="w-4 h-4" />
-                      Canceled
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 text-yellow-600 text-xs font-medium">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Pending
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-base font-semibold text-slate-900">
+                        {planLabel(p.planKey)}
                       </div>
-                      <button
-                        onClick={() => retryPayment(p)}
-                        disabled={paying === p._id}
-                        className="text-xs px-3 py-1 rounded-lg border border-[#0f766e] text-[#0f766e] hover:bg-[#e0f2f1]"
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium ${
+                          p.status === "paid"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : p.status === "failed"
+                              ? "bg-red-50 text-red-600"
+                              : p.status === "canceled"
+                                ? "bg-slate-100 text-slate-500"
+                                : "bg-amber-50 text-amber-700"
+                        }`}
                       >
-                        {paying === p._id
-                          ? "Processing..."
-                          : "Retry"}
-                      </button>
-                      <button
-                        onClick={() => cancelPayment(p)}
-                        className="text-xs px-3 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
-                      >
-                        Cancel
-                      </button>
+                        {p.status === "paid" ? (
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        ) : p.status === "pending" ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5" />
+                        )}
+                        {formatStatusLabel(p.status)}
+                      </span>
                     </div>
-                  )}
+
+                    <div className="mt-3 grid gap-3 text-sm text-slate-500 sm:grid-cols-2">
+                      <div>
+                        <div className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+                          Date
+                        </div>
+                        <div className="mt-1 text-slate-600">
+                          {formatDateTime(p.createdAt)}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
+                          Order ID
+                        </div>
+                        <div className="mt-1 truncate text-slate-600">
+                          {p.razorpayOrderId}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-3 lg:items-end">
+                    <div className="text-2xl font-semibold text-slate-900">
+                      {formatCurrency(p.amount)}
+                    </div>
+
+                    {p.status === "pending" && (
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <button
+                          onClick={() => retryPayment(p)}
+                          disabled={paying === p._id}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#3cc2bf]/20 bg-[#3cc2bf]/10 px-4 py-2.5 text-sm font-medium text-[#1f6563] transition hover:bg-[#3cc2bf]/15 disabled:opacity-50"
+                        >
+                          {paying === p._id ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            "Retry"
+                          )}
+                        </button>
+                        <button
+                          onClick={() => cancelPayment(p)}
+                          className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-100"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

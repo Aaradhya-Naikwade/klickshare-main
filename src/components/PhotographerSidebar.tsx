@@ -82,6 +82,7 @@
 
 import { useRouter } from "next/navigation";
 import { removeToken } from "@/lib/auth";
+import DashboardSidebarShell from "@/components/DashboardSidebarShell";
 
 import {
   User,
@@ -89,13 +90,14 @@ import {
   Users,
   UserPlus,
   Bell,
-  Receipt,
-  LogOut,
+  CreditCard,
 } from "lucide-react";
 
 export default function PhotographerSidebar({
   active,
   setActive,
+  onNavigate,
+  showHeader,
 }: any) {
   const router = useRouter();
 
@@ -111,68 +113,20 @@ export default function PhotographerSidebar({
     { name: "Join New Group", icon: UserPlus },
     { name: "Join Requests", icon: Users },
     { name: "Notifications", icon: Bell },
-    { name: "Transactions", icon: Receipt },
+    { name: "Transactions", icon: CreditCard },
   ];
 
   return (
-    <div
-      className="fixed left-0 top-0 h-screen w-64 flex flex-col justify-between p-5 border-r bg-white"
-      style={{ borderColor: "#b2dfdb" }}
-    >
-      {/* ================= TOP ================= */}
-      <div className="flex flex-col h-full">
-        {/* Logo */}
-        <div className="text-xl font-bold mb-6 text-teal-700">
-          Klickshare
-        </div>
-
-        {/* Tabs */}
-        <div className="flex-1 overflow-y-auto space-y-1 pr-1">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = active === tab.name;
-
-            return (
-              <button
-                key={tab.name}
-                onClick={() => setActive(tab.name)}
-                className={`
-                  w-full flex items-center gap-3 p-3 rounded-lg text-sm font-medium
-                  transition-all relative
-                  ${
-                    isActive
-                      ? "bg-teal-700 text-white"
-                      : "text-gray-900 hover:bg-teal-50"
-                  }
-                `}
-              >
-                {/* active indicator */}
-                {isActive && (
-                  <div className="absolute left-0 top-0 h-full w-1 bg-white rounded-r" />
-                )}
-
-                <Icon
-                  size={18}
-                  className={
-                    isActive ? "text-white" : "text-teal-700"
-                  }
-                />
-
-                {tab.name}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ================= LOGOUT ================= */}
-      <button
-        onClick={logout}
-        className="flex items-center justify-center gap-2 p-3 rounded-lg text-white font-medium transition-all bg-teal-700 hover:bg-teal-800"
-      >
-        <LogOut size={18} />
-        Logout
-      </button>
-    </div>
+    <DashboardSidebarShell
+      tabs={tabs}
+      active={active}
+      roleLabel="Photographer Dashboard"
+      showHeader={showHeader}
+      onSelect={(tab) => {
+        setActive(tab);
+        onNavigate?.();
+      }}
+      onLogout={logout}
+    />
   );
 }

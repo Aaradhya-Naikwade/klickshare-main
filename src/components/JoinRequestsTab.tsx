@@ -299,6 +299,9 @@ import {
   X,
   Ban,
   Loader2,
+  Phone,
+  UserRoundPlus,
+  FolderOpen,
 } from "lucide-react";
 
 export default function JoinRequestsTab() {
@@ -315,6 +318,9 @@ export default function JoinRequestsTab() {
   const [processingId,
     setProcessingId] =
     useState("");
+
+  const pendingCount =
+    requests.length;
 
   // LOAD REQUESTS
   async function loadRequests() {
@@ -468,29 +474,41 @@ export default function JoinRequestsTab() {
 
   return (
 
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-4xl space-y-6">
 
       {/* HEADER */}
-      <div>
+      <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white/95 p-6 shadow-[0_20px_60px_-30px_rgba(31,101,99,0.25)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight text-slate-900">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#3cc2bf]/12 text-[#1f6563]">
+                <Users className="h-5 w-5" />
+              </span>
+              Join Requests
+            </h1>
 
-        <h1 className="text-2xl font-bold text-[#0f766e] flex items-center gap-2">
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Review incoming group requests and decide who gets access.
+            </p>
+          </div>
 
-          <Users className="w-6 h-6" />
-
-          Join Requests
-
-        </h1>
-
-        <p className="text-sm text-[#6b7280] mt-1">
-          Manage group join requests
-        </p>
-
+          <div className="sm:w-fit">
+            <div className="rounded-2xl bg-[#f8fcfc] px-4 py-3">
+              <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                Pending
+              </div>
+              <div className="mt-2 text-2xl font-semibold text-[#1f6563]">
+                {pendingCount}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ERROR */}
       {error && (
 
-        <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg">
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-600">
 
           {error}
 
@@ -502,15 +520,17 @@ export default function JoinRequestsTab() {
       {!loading &&
         requests.length === 0 && (
 
-          <div className="bg-white border border-[#b2dfdb] rounded-xl p-10 text-center shadow-sm">
+          <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white p-10 text-center shadow-sm">
 
-            <Users className="w-10 h-10 text-[#0f766e] mx-auto mb-3" />
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#3cc2bf]/12 text-[#1f6563]">
+              <Users className="h-7 w-7" />
+            </div>
 
-            <div className="font-semibold text-[#111827]">
+            <div className="text-lg font-semibold text-slate-900">
               No pending requests
             </div>
 
-            <div className="text-sm text-[#6b7280] mt-1">
+            <div className="mt-2 text-sm text-slate-600">
               New join requests will appear here
             </div>
 
@@ -532,63 +552,56 @@ export default function JoinRequestsTab() {
 
             <div
               key={req._id}
-              className="
-                bg-white
-                border border-[#b2dfdb]
-                rounded-xl
-                p-5
-                shadow-sm
-                flex
-                items-center
-                justify-between
-                hover:shadow-md
-                transition
-              "
+              className="rounded-[26px] border border-[#3cc2bf]/20 bg-white p-5 shadow-sm transition hover:shadow-md"
             >
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start gap-4">
+                    <img
+                      src={
+                        requestUser
+                          .profilePhoto ||
+                        `https://ui-avatars.com/api/?name=${requestUser.name || "User"}`
+                      }
+                      className="h-14 w-14 shrink-0 rounded-2xl border border-[#3cc2bf]/20 object-cover"
+                    />
 
-              {/* USER INFO */}
-              <div className="flex items-center gap-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-[#1f6563]/8 px-3 py-1 text-xs font-medium text-[#1f6563]">
+                          <UserRoundPlus className="h-3.5 w-3.5" />
+                          Pending request
+                        </span>
+                      </div>
 
-                <img
-                  src={
-                    requestUser
-                      .profilePhoto ||
-                    `https://ui-avatars.com/api/?name=${requestUser.name || "User"}`
-                  }
-                  className="
-                    w-12 h-12
-                    rounded-full
-                    object-cover
-                    border border-[#b2dfdb]
-                  "
-                />
+                      <div className="mt-3 text-lg font-semibold text-slate-900">
+                        {requestUser.name || "Unknown User"}
+                      </div>
 
-                <div>
+                      <div className="mt-3 flex flex-col gap-2 text-sm text-slate-600">
+                        <div className="inline-flex items-center gap-2">
+                          <FolderOpen className="h-4 w-4 text-[#1f6563]" />
+                          <span className="font-medium text-slate-700">
+                            Group:
+                          </span>
+                          <span className="text-[#1f6563]">
+                            {requestGroup.name || "Unknown Group"}
+                          </span>
+                        </div>
 
-                  <div className="font-medium text-[#111827]">
-                    {
-                      requestUser.name || "Unknown User"
-                    }
+                        <div className="inline-flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-[#1f6563]" />
+                          <span className="font-medium text-slate-700">
+                            Mobile:
+                          </span>
+                          <span>{requestUser.phone || "-"}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="text-sm text-[#0f766e]">
-                    {
-                      requestGroup.name || "Unknown Group"
-                    }
-                  </div>
-
-                  <div className="text-xs text-[#6b7280]">
-                    {
-                      requestUser.phone || "-"
-                    }
-                  </div>
-
                 </div>
 
-              </div>
-
-              {/* ACTION BUTTONS */}
-              <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 lg:ml-4 lg:justify-end">
 
                 {/* APPROVE */}
                 <button
@@ -603,17 +616,7 @@ export default function JoinRequestsTab() {
                     processingId ===
                     req._id
                   }
-                  className="
-                    bg-[#0f766e]
-                    hover:bg-[#0b5e58]
-                    text-white
-                    px-3 py-2
-                    rounded-lg
-                    text-sm
-                    flex items-center gap-1
-                    shadow-sm
-                    disabled:opacity-50
-                  "
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1f6563] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#174d4b] disabled:opacity-50"
                 >
 
                   {processingId ===
@@ -643,17 +646,7 @@ export default function JoinRequestsTab() {
                     processingId ===
                     req._id
                   }
-                  className="
-                    bg-yellow-500
-                    hover:bg-yellow-600
-                    text-white
-                    px-3 py-2
-                    rounded-lg
-                    text-sm
-                    flex items-center gap-1
-                    shadow-sm
-                    disabled:opacity-50
-                  "
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-amber-600 disabled:opacity-50"
                 >
 
                   <X className="w-4 h-4" />
@@ -675,17 +668,7 @@ export default function JoinRequestsTab() {
                     processingId ===
                     req._id
                   }
-                  className="
-                    bg-red-600
-                    hover:bg-red-700
-                    text-white
-                    px-3 py-2
-                    rounded-lg
-                    text-sm
-                    flex items-center gap-1
-                    shadow-sm
-                    disabled:opacity-50
-                  "
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
                 >
 
                   <Ban className="w-4 h-4" />
@@ -694,8 +677,8 @@ export default function JoinRequestsTab() {
 
                 </button>
 
+                </div>
               </div>
-
             </div>
             );
           }

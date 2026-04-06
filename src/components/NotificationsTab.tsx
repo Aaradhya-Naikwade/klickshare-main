@@ -279,6 +279,8 @@ import {
   CheckCheck,
   Trash2,
   Loader2,
+  Clock3,
+  Circle,
 } from "lucide-react";
 
 export default function NotificationsTab() {
@@ -293,6 +295,10 @@ export default function NotificationsTab() {
 
   const [actionLoading, setActionLoading] =
     useState<string | null>(null);
+
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read
+  ).length;
 
   async function loadNotifications() {
 
@@ -467,6 +473,52 @@ export default function NotificationsTab() {
 
   }
 
+  function formatRelativeTime(
+    dateValue: string
+  ) {
+    const date = new Date(dateValue);
+    const diffMs =
+      Date.now() - date.getTime();
+    const diffMinutes = Math.floor(
+      diffMs / 60000
+    );
+
+    if (diffMinutes < 1) return "Just now";
+    if (diffMinutes < 60) {
+      return `${diffMinutes} min ago`;
+    }
+
+    const diffHours = Math.floor(
+      diffMinutes / 60
+    );
+    if (diffHours < 24) {
+      return `${diffHours} hr ago`;
+    }
+
+    const diffDays = Math.floor(
+      diffHours / 24
+    );
+    if (diffDays < 7) {
+      return `${diffDays} day${
+        diffDays > 1 ? "s" : ""
+      } ago`;
+    }
+
+    return date.toLocaleDateString();
+  }
+
+  function isOlderThanDays(
+    dateValue: string,
+    days: number
+  ) {
+    const date = new Date(dateValue);
+    const diffMs =
+      Date.now() - date.getTime();
+
+    return diffMs >=
+      days * 24 * 60 * 60 * 1000;
+  }
+
   // LOADING STATE
   if (loading)
     return (
@@ -489,76 +541,83 @@ export default function NotificationsTab() {
 
   return (
 
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-4xl space-y-6">
 
       {/* HEADER */}
-      <div className="flex justify-between items-center">
+      <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white/95 p-6 shadow-[0_20px_60px_-30px_rgba(31,101,99,0.25)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight text-slate-900">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#3cc2bf]/12 text-[#1f6563]">
+                <Bell className="h-5 w-5" />
+              </span>
+              Notifications
+            </h1>
 
-        <div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Stay updated with the latest activity across your account.
+            </p>
+          </div>
 
-          <h1 className="text-2xl font-bold text-[#0f766e] flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-3 sm:w-fit">
+            <div className="rounded-2xl bg-[#f8fcfc] px-4 py-3">
+              <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                Total
+              </div>
+              <div className="mt-2 text-2xl font-semibold text-slate-900">
+                {notifications.length}
+              </div>
+            </div>
 
-            <Bell className="w-6 h-6" />
-
-            Notifications
-
-          </h1>
-
-          <p className="text-sm text-[#6b7280] mt-1">
-            Stay updated with your activity
-          </p>
-
+            <div className="rounded-2xl bg-[#f8fcfc] px-4 py-3">
+              <div className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+                Unread
+              </div>
+              <div className="mt-2 text-2xl font-semibold text-[#1f6563]">
+                {unreadCount}
+              </div>
+            </div>
+          </div>
         </div>
 
         {notifications.length > 0 && (
+          <div className="mt-5 flex flex-col gap-3 border-t border-[#3cc2bf]/15 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-slate-500">
+              Unread notifications are highlighted for quicker review.
+            </p>
 
-          <button
-            onClick={markAllAsRead}
-            disabled={
-              actionLoading === "all"
-            }
-            className="
-              bg-[#0f766e]
-              hover:bg-[#0b5e58]
-              text-white
-              px-4 py-2
-              rounded-lg
-              text-sm
-              flex items-center gap-2
-              shadow-sm
-              disabled:opacity-50
-            "
-          >
-
-            {actionLoading === "all"
-              ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              )
-              : (
-                <CheckCheck className="w-4 h-4" />
-              )
-            }
-
-            Mark all as read
-
-          </button>
-
+            <button
+              onClick={markAllAsRead}
+              disabled={
+                actionLoading === "all"
+              }
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1f6563] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#174d4b] disabled:opacity-50"
+            >
+              {actionLoading === "all" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCheck className="h-4 w-4" />
+              )}
+              Mark all as read
+            </button>
+          </div>
         )}
-
       </div>
 
       {/* EMPTY STATE */}
       {notifications.length === 0 && (
 
-        <div className="bg-white border border-[#b2dfdb] rounded-xl p-10 text-center shadow-sm">
+        <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white p-10 text-center shadow-sm">
 
-          <Bell className="w-10 h-10 text-[#0f766e] mx-auto mb-3" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#3cc2bf]/12 text-[#1f6563]">
+            <Bell className="h-7 w-7" />
+          </div>
 
-          <div className="font-semibold text-[#111827]">
+          <div className="text-lg font-semibold text-slate-900">
             No notifications yet
           </div>
 
-          <div className="text-sm text-[#6b7280] mt-1">
+          <div className="mt-2 text-sm text-slate-600">
             When something happens, it will appear here
           </div>
 
@@ -577,97 +636,88 @@ export default function NotificationsTab() {
                 notification._id
               }
               className={`
-                bg-white
+                rounded-[24px]
                 border
-                rounded-xl
-                p-4
-                flex
-                justify-between
-                items-start
+                p-5
                 shadow-sm
                 transition
                 ${
                   notification.read
-                    ? "border-[#b2dfdb]"
-                    : "border-[#0f766e] bg-[#e0f2f1]"
+                    ? "border-[#3cc2bf]/15 bg-white"
+                    : "border-[#1f6563]/20 bg-[#f2fbfb]"
                 }
               `}
             >
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!notification.read && (
+                      <span className="inline-flex items-center gap-2 rounded-full bg-[#1f6563]/8 px-3 py-1 text-xs font-medium text-[#1f6563]">
+                        <Circle className="h-2.5 w-2.5 fill-current" />
+                        Unread
+                      </span>
+                    )}
+                    {notification.read && (
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+                        Read
+                      </span>
+                    )}
+                  </div>
 
-              {/* LEFT */}
-              <div>
+                  <div className="mt-3 text-base font-medium leading-7 text-slate-900">
+                    {notification.message}
+                  </div>
 
-                <div className="font-medium text-[#111827]">
-
-                  {
-                    notification.message
-                  }
-
+                  <div className="mt-3 flex flex-col gap-1 text-sm text-slate-500">
+                    <span className="inline-flex items-center gap-2">
+                      <Clock3 className="h-4 w-4 text-[#1f6563]" />
+                      {isOlderThanDays(
+                        notification.createdAt,
+                        7
+                      )
+                        ? new Date(
+                            notification.createdAt
+                          ).toLocaleString()
+                        : formatRelativeTime(
+                            notification.createdAt
+                          )}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="text-xs text-[#6b7280] mt-1">
-
-                  {new Date(
-                    notification.createdAt
-                  ).toLocaleString()}
-
-                </div>
-
-              </div>
-
-              {/* ACTIONS */}
-              <div className="flex gap-2 ml-4">
-
-                {!notification.read && (
+                <div className="flex flex-wrap gap-2 lg:ml-4 lg:justify-end">
+                  {!notification.read && (
+                    <button
+                      onClick={() =>
+                        markAsRead(
+                          notification._id
+                        )
+                      }
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#3cc2bf]/20 bg-[#3cc2bf]/10 px-3 py-2 text-sm font-medium text-[#1f6563] transition hover:bg-[#3cc2bf]/15"
+                    >
+                      {actionLoading ===
+                      notification._id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                      Mark read
+                    </button>
+                  )}
 
                   <button
                     onClick={() =>
-                      markAsRead(
+                      deleteNotification(
                         notification._id
                       )
                     }
-                    className="
-                      p-2
-                      rounded-lg
-                      hover:bg-[#e0f2f1]
-                      text-[#0f766e]
-                    "
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
                   >
-
-                    {actionLoading ===
-                      notification._id
-                      ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      )
-                      : (
-                        <Check className="w-4 h-4" />
-                      )
-                    }
-
+                    <Trash2 className="h-4 w-4" />
+                    Delete
                   </button>
-
-                )}
-
-                <button
-                  onClick={() =>
-                    deleteNotification(
-                      notification._id
-                    )
-                  }
-                  className="
-                    p-2
-                    rounded-lg
-                    hover:bg-red-50
-                    text-red-600
-                  "
-                >
-
-                  <Trash2 className="w-4 h-4" />
-
-                </button>
-
+                </div>
               </div>
-
             </div>
 
           )

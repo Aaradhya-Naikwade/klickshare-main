@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -8,7 +7,15 @@ import {
   Sparkles,
   UploadCloud,
   FolderUp,
+  PencilLine,
 } from "lucide-react";
+
+type EventItem = {
+  _id: string;
+  title: string;
+};
+
+type CreationMode = "manual" | "upload";
 
 export default function CreateEventTab({
   onEventCreated,
@@ -16,13 +23,17 @@ export default function CreateEventTab({
   onEventCreated?: () => void;
 }) {
   const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
-  const [error, setError] = useState("");
-  const [events, setEvents] = useState<any[]>([]);
-  const [showUpload, setShowUpload] =
+  const [description, setDescription] =
+    useState("");
+  const [loading, setLoading] =
     useState(false);
+  const [success, setSuccess] =
+    useState("");
+  const [error, setError] = useState("");
+  const [events, setEvents] =
+    useState<EventItem[]>([]);
+  const [mode, setMode] =
+    useState<CreationMode>("manual");
   const folderInputRef =
     useRef<HTMLInputElement>(null);
 
@@ -70,7 +81,7 @@ export default function CreateEventTab({
   }
 
   useEffect(() => {
-    loadEvents();
+    void loadEvents();
   }, []);
 
   useEffect(() => {
@@ -84,88 +95,53 @@ export default function CreateEventTab({
         ""
       );
     }
-  }, [showUpload]);
+  }, [mode]);
 
-  // async function handleCreateEvent() {
-  //   try {
-  //     setLoading(true);
-  //     setError("");
-  //     setSuccess("");
-
-  //     const token = getToken();
-
-  //     const res = await fetch("/api/events/create", {
-  //       method: "POST",
-  //       headers: {
-  //         "Content-Type": "application/json",
-  //       },
-  //       body: JSON.stringify({
-  //         token,
-  //         title,
-  //         description,
-  //       }),
-  //     });
-
-  //     const data = await res.json();
-
-  //     if (!res.ok) {
-  //       throw new Error(data.error || "Failed to create event");
-  //     }
-
-  //     setSuccess("Event created successfully");
-  //     setTitle("");
-  //     setDescription("");
-
-  //     onEventCreated?.();
-  //   } catch (err: any) {
-  //     setError(err.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // }
-  
   async function handleCreateEvent() {
-  try {
-    setLoading(true);
-    setError("");
-    setSuccess("");
+    try {
+      setLoading(true);
+      setError("");
+      setSuccess("");
 
-    const token = getToken();
+      const token = getToken();
 
-    if (!token) {
-      throw new Error("Not logged in");
+      if (!token) {
+        throw new Error("Not logged in");
+      }
+
+      const res = await fetch("/api/events/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title,
+          description,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.error || "Failed to create event"
+        );
+      }
+
+      setSuccess(
+        "Event created successfully. You can now start managing groups inside it."
+      );
+      setTitle("");
+      setDescription("");
+
+      onEventCreated?.();
+      await loadEvents();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-
-    const res = await fetch("/api/events/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`, // ✅ FIX
-      },
-      body: JSON.stringify({
-        title,
-        description,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.error || "Failed to create event");
-    }
-
-    setSuccess("Event created successfully");
-    setTitle("");
-    setDescription("");
-
-    onEventCreated?.();
-
-  } catch (err: any) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-
   }
 
   function handleFolderSelect(
@@ -313,147 +289,175 @@ export default function CreateEventTab({
       setFolderFiles([]);
       setFolderGroups([]);
       setFolderRoot("");
+      onEventCreated?.();
     } catch (err: any) {
       setFolderError(err.message);
-  } finally {
+    } finally {
       setFolderLoading(false);
     }
   }
 
   return (
-    <div className="max-w-2xl">
-      {/* ================= HEADER ================= */}
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#0f766e] flex items-center gap-2">
-            <Calendar className="w-6 h-6" />
-            Create Event
-          </h1>
-          <p className="text-sm text-[#6b7280] mt-1">
-            Create a new event to manage groups and photos
-          </p>
-        </div>
+    <div className="max-w-4xl space-y-6">
+      <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white/95 p-6 shadow-[0_20px_60px_-30px_rgba(31,101,99,0.25)]">
+        <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight text-slate-900">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#3cc2bf]/12 text-[#1f6563]">
+            <Calendar className="h-5 w-5" />
+          </span>
+          Create Event
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Choose how you want to set up the event. You can create it manually or import a folder and let groups be created from the folder structure.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setMode("manual")}
+          className={`rounded-[24px] border p-5 text-left transition ${
+            mode === "manual"
+              ? "border-[#1f6563]/30 bg-[#f5fbfb] shadow-sm"
+              : "border-[#3cc2bf]/20 bg-white hover:bg-[#f8fcfc]"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#3cc2bf]/12 text-[#1f6563]">
+              <PencilLine className="h-5 w-5" />
+            </span>
+            <div>
+              <div className="text-base font-semibold text-slate-900">
+                Create Manually
+              </div>
+              <div className="mt-1 text-sm text-slate-600">
+                Best when you want to add the event first and create groups later.
+              </div>
+            </div>
+          </div>
+        </button>
 
         <button
-          onClick={() =>
-            setShowUpload(!showUpload)
-          }
-          className="bg-[#e0f2f1] hover:bg-[#ccebea] text-[#0f766e] px-4 py-2 rounded-lg text-sm border border-[#b2dfdb] flex items-center gap-2"
+          type="button"
+          onClick={() => setMode("upload")}
+          className={`rounded-[24px] border p-5 text-left transition ${
+            mode === "upload"
+              ? "border-[#1f6563]/30 bg-[#f5fbfb] shadow-sm"
+              : "border-[#3cc2bf]/20 bg-white hover:bg-[#f8fcfc]"
+          }`}
         >
-          <FolderUp className="w-4 h-4" />
-          Direct Upload
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#3cc2bf]/12 text-[#1f6563]">
+              <FolderUp className="h-5 w-5" />
+            </span>
+            <div>
+              <div className="text-base font-semibold text-slate-900">
+                Import From Folder
+              </div>
+              <div className="mt-1 text-sm text-slate-600">
+                Best when your files are already organized into folders and subfolders.
+              </div>
+            </div>
+          </div>
         </button>
       </div>
 
-      {/* ================= MAIN CARD ================= */}
-      {!showUpload && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-md transition">
-          {/* Success */}
+      {mode === "manual" && (
+        <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white p-6 shadow-sm">
           {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg mb-5">
+            <div className="mb-5 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-700">
               {success}
             </div>
           )}
 
-          {/* Error */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg mb-5">
+            <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
               {error}
             </div>
           )}
 
-          {/* Event Title */}
-          <div className="mb-5">
-            <label className="text-sm font-semibold text-gray-800">
-              Event Title *
-            </label>
-
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Riya Wedding"
-              className="w-full mt-2 px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-[#0f766e] focus:outline-none transition"
-            />
+          <div className="mb-5 border-b border-[#3cc2bf]/15 pb-5">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Manual Event Setup
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Create the event first, then continue with group creation from the next step in your dashboard.
+            </p>
           </div>
 
-          {/* Description */}
-          <div className="mb-7">
-            <label className="text-sm font-semibold text-gray-800">
-              Description
-            </label>
-
-            <textarea
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description about this event..."
-              className="w-full mt-2 px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-[#0f766e] focus:outline-none transition resize-none"
-            />
-          </div>
-
-          {/* Action Row */}
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-gray-400 flex items-center gap-1">
-              <Sparkles className="w-4 h-4" />
-              Event will be created instantly
+          <div className="space-y-5">
+            <div>
+              <label className="text-sm font-medium text-slate-700">
+                Event Title
+              </label>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Ex: Riya Wedding"
+                className="mt-2 w-full rounded-2xl border border-[#3cc2bf]/20 bg-white px-4 py-3 text-slate-900 focus:border-[#1f6563] focus:outline-none focus:ring-4 focus:ring-[#3cc2bf]/20"
+              />
             </div>
 
-            <button
-              onClick={handleCreateEvent}
-              disabled={loading || !title}
-              className="bg-[#0f766e] hover:bg-[#0d5f59] text-white px-6 py-3 rounded-xl font-semibold disabled:bg-gray-400 transition"
-            >
-              {loading ? "Creating..." : "Create Event"}
-            </button>
+            <div>
+              <label className="text-sm font-medium text-slate-700">
+                Description
+              </label>
+              <textarea
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional description about this event..."
+                className="mt-2 w-full resize-none rounded-2xl border border-[#3cc2bf]/20 bg-white px-4 py-3 text-slate-900 focus:border-[#1f6563] focus:outline-none focus:ring-4 focus:ring-[#3cc2bf]/20"
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 border-t border-[#3cc2bf]/15 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="inline-flex items-center gap-2 text-xs text-slate-500">
+                <Sparkles className="h-4 w-4" />
+                Event will be created instantly.
+              </div>
+
+              <button
+                onClick={handleCreateEvent}
+                disabled={loading || !title.trim()}
+                className="inline-flex items-center justify-center rounded-2xl bg-[#1f6563] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#174d4b] disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {loading ? "Creating..." : "Create Event"}
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {showUpload && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm hover:shadow-md transition">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="bg-teal-100 p-3 rounded-full">
-              <UploadCloud className="w-6 h-6 text-teal-700" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Upload Folder
-              </h2>
-              <p className="text-sm text-gray-500">
-                Create event and groups from folder structure
-              </p>
-            </div>
+      {mode === "upload" && (
+        <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white p-6 shadow-sm">
+          <div className="mb-5 border-b border-[#3cc2bf]/15 pb-5">
+            <h2 className="text-lg font-semibold text-slate-900">
+              Import From Folder
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              Upload a folder to create an event and generate groups from subfolders automatically.
+            </p>
           </div>
 
           {folderSuccess && (
-            <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg mb-4">
+            <div className="mb-4 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-700">
               {folderSuccess}
             </div>
           )}
 
           {folderError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg mb-4">
+            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
               {folderError}
             </div>
           )}
 
-          <label
-            className="
-              border-2 border-dashed border-gray-300
-              rounded-xl
-              p-8
-              flex flex-col items-center justify-center
-              cursor-pointer
-              hover:bg-gray-50
-              transition
-            "
-          >
-            <UploadCloud className="w-8 h-8 text-gray-600 mb-3" />
-            <div className="font-medium text-gray-800">
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#3cc2bf]/25 p-8 text-center transition hover:bg-[#f8fcfc]">
+            <UploadCloud className="mb-3 h-8 w-8 text-[#1f6563]" />
+            <div className="font-medium text-slate-800">
               Click to select a folder
             </div>
-            <div className="text-sm text-gray-500 mt-1">
-              Subfolders become groups, root photos go to General
+            <div className="mt-1 text-sm text-slate-500">
+              Subfolders become groups, and root-level photos go into General.
             </div>
 
             <input
@@ -467,40 +471,31 @@ export default function CreateEventTab({
           </label>
 
           {folderFiles.length > 0 && (
-            <div className="mt-4 text-sm text-gray-600">
+            <div className="mt-4 rounded-[24px] border border-[#3cc2bf]/15 bg-[#f8fcfc] p-4 text-sm text-slate-600">
               <div>
-                Event name:{" "}
-                <span className="font-medium text-gray-900">
-                  {folderRoot}
-                </span>
+                Event name: <span className="font-medium text-slate-900">{folderRoot}</span>
               </div>
-              <div>
-                Files:{" "}
-                <span className="font-medium text-gray-900">
-                  {folderFiles.length}
-                </span>
+              <div className="mt-1">
+                Files: <span className="font-medium text-slate-900">{folderFiles.length}</span>
               </div>
               <div className="mt-2">
-                Groups to create:{" "}
-                <span className="font-medium text-gray-900">
-                  {folderGroups.join(", ")}
-                </span>
+                Groups to create: <span className="font-medium text-slate-900">{folderGroups.join(", ")}</span>
               </div>
             </div>
           )}
 
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-xs text-gray-400 flex items-center gap-1">
-              <Sparkles className="w-4 h-4" />
-              Event and groups will be created instantly
+          <div className="mt-6 flex flex-col gap-3 border-t border-[#3cc2bf]/15 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="inline-flex items-center gap-2 text-xs text-slate-500">
+              <Sparkles className="h-4 w-4" />
+              Event and groups will be created instantly after confirmation.
             </div>
 
             <button
               onClick={openConfirm}
               disabled={folderLoading}
-              className="bg-[#0f766e] hover:bg-[#0d5f59] text-white px-6 py-3 rounded-xl font-semibold disabled:bg-gray-400 transition"
+              className="inline-flex items-center justify-center rounded-2xl bg-[#1f6563] px-6 py-3 text-sm font-medium text-white transition hover:bg-[#174d4b] disabled:cursor-not-allowed disabled:bg-slate-400"
             >
-              Upload Folder
+              {folderLoading ? "Uploading..." : "Continue Import"}
             </button>
           </div>
         </div>
@@ -508,20 +503,16 @@ export default function CreateEventTab({
 
       {showConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Confirm Upload
+          <div className="w-full max-w-lg rounded-[28px] bg-white p-6 shadow-lg">
+            <h3 className="text-lg font-semibold text-slate-900">
+              Confirm Import
             </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Your event name will be{" "}
-              <span className="font-semibold text-gray-900">
-                {folderRoot || "New Event"}
-              </span>
-              . You can rename it or choose an existing event.
+            <p className="mb-4 mt-2 text-sm text-slate-600">
+              Choose whether to create a new event from this folder or place the upload inside an existing event.
             </p>
 
             <div className="mb-4">
-              <label className="text-sm font-semibold text-gray-800">
+              <label className="text-sm font-medium text-slate-700">
                 Event Name
               </label>
               <input
@@ -530,20 +521,20 @@ export default function CreateEventTab({
                   setEventName(e.target.value)
                 }
                 disabled={eventChoice !== "__new__"}
-                className="w-full mt-2 px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-[#0f766e] focus:outline-none disabled:bg-gray-100"
+                className="mt-2 w-full rounded-2xl border border-[#3cc2bf]/20 bg-white px-4 py-3 text-slate-900 focus:border-[#1f6563] focus:outline-none focus:ring-4 focus:ring-[#3cc2bf]/20 disabled:bg-slate-100"
               />
             </div>
 
             <div className="mb-5">
-              <label className="text-sm font-semibold text-gray-800">
-                Use Existing Event (optional)
+              <label className="text-sm font-medium text-slate-700">
+                Use Existing Event
               </label>
               <select
                 value={eventChoice}
                 onChange={(e) =>
                   setEventChoice(e.target.value)
                 }
-                className="w-full mt-2 px-4 py-3 border border-gray-300 rounded-xl text-black focus:ring-2 focus:ring-[#0f766e] focus:outline-none"
+                className="mt-2 w-full rounded-2xl border border-[#3cc2bf]/20 bg-white px-4 py-3 text-slate-900 focus:border-[#1f6563] focus:outline-none focus:ring-4 focus:ring-[#3cc2bf]/20"
               >
                 <option value="__new__">
                   Create new event
@@ -561,18 +552,16 @@ export default function CreateEventTab({
                 onClick={() =>
                   setShowConfirm(false)
                 }
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700"
+                className="rounded-xl border border-slate-300 px-4 py-2 text-slate-700"
               >
                 Cancel
               </button>
               <button
                 onClick={handleFolderUpload}
                 disabled={folderLoading}
-                className="px-4 py-2 rounded-lg bg-[#0f766e] text-white disabled:bg-gray-400"
+                className="rounded-xl bg-[#1f6563] px-4 py-2 text-white disabled:bg-slate-400"
               >
-                {folderLoading
-                  ? "Uploading..."
-                  : "Confirm Upload"}
+                {folderLoading ? "Uploading..." : "Confirm Import"}
               </button>
             </div>
           </div>

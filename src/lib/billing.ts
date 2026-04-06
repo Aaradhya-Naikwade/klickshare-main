@@ -1,6 +1,8 @@
 import { getPlanByKey, isPlanKey } from "@/lib/plans";
 import { getRazorpay } from "@/lib/razorpay";
+import { addYears } from "@/lib/time";
 import Payment from "@/models/Payment";
+import Photo from "@/models/Photo";
 import UserPlan from "@/models/UserPlan";
 
 type PaymentLike = {
@@ -368,6 +370,36 @@ export async function syncLatestPaidPlan(
     latestPaidPayment.planQuota > 0
       ? latestPaidPayment.planQuota
       : planDoc?.quota;
+  const planPaidAt =
+    latestPaidPayment.paidAt ||
+    new Date(
+      getEffectivePaidAt(
+        latestPaidPayment
+      )
+    );
+  const planStart = new Date(planPaidAt);
+  const planEnd = addYears(planStart, 1);
+  let carryForwardUsed = 0;
+
+  if (activePlan) {
+    const existingCarryForward =
+      typeof activePlan.carryForwardUsed === "number" &&
+      activePlan.carryForwardUsed > 0
+        ? activePlan.carryForwardUsed
+        : 0;
+    const uploadsInCurrentWindow =
+      await Photo.countDocuments({
+        uploadedBy: latestPaidPayment.userId,
+        createdAt: {
+          $gte: activePlan.planStart,
+          $lt: planStart,
+        },
+      });
+
+    carryForwardUsed =
+      existingCarryForward +
+      uploadsInCurrentWindow;
+  }
   let syncedPlan;
 
   if (activePlan) {
@@ -379,8 +411,11 @@ export async function syncLatestPaidPlan(
         {
           $set: {
             planKey: latestPaidPayment.planKey,
+            planStart,
+            planEnd,
             priceInr: latestPaidPayment.amount,
             planQuota,
+            carryForwardUsed,
             sourcePaymentId:
               latestPaidPayment._id,
             updatedAt: now,
@@ -406,12 +441,6 @@ export async function syncLatestPaidPlan(
       }
     );
   } else {
-    const planStart = now;
-    const planEnd = new Date(
-      now.getTime() +
-        365 * 24 * 60 * 60 * 1000
-    );
-
     syncedPlan =
       await UserPlan.collection.findOneAndUpdate(
         {
@@ -427,6 +456,7 @@ export async function syncLatestPaidPlan(
             status: "active",
             priceInr: latestPaidPayment.amount,
             planQuota,
+            carryForwardUsed: 0,
             sourcePaymentId:
               latestPaidPayment._id,
             updatedAt: now,
@@ -448,13 +478,7 @@ export async function syncLatestPaidPlan(
     },
     {
       $set: {
-        paidAt:
-          latestPaidPayment.paidAt ||
-          new Date(
-            getEffectivePaidAt(
-              latestPaidPayment
-            )
-          ),
+        paidAt: planPaidAt,
         planActivatedAt: now,
         planActivatedSource:
           "status-sync",

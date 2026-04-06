@@ -242,7 +242,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { removeToken } from "@/lib/auth";
 
@@ -262,6 +262,8 @@ import CaptureProfilePhoto from "@/components/CaptureProfilePhoto";
 
 export default function ViewerDashboard() {
   const router = useRouter();
+  const VIEWER_ACTIVE_TAB_KEY =
+    "viewer-dashboard-active-tab";
 
   const [selectedGroupId, setSelectedGroupId] =
     useState<string | null>(null);
@@ -277,6 +279,9 @@ export default function ViewerDashboard() {
 
   const [showCamera, setShowCamera] =
     useState(false);
+
+  const selectedGroupIdRef =
+    useRef<string | null>(null);
 
   // ================= LOAD USER =================
   async function loadUser() {
@@ -324,7 +329,74 @@ export default function ViewerDashboard() {
   }
 
   useEffect(() => {
+    const savedTab =
+      localStorage.getItem(
+        VIEWER_ACTIVE_TAB_KEY
+      );
+
+    if (savedTab) {
+      setActive(savedTab);
+    }
+
     loadUser();
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(
+      VIEWER_ACTIVE_TAB_KEY,
+      active
+    );
+  }, [active]);
+
+  useEffect(() => {
+    selectedGroupIdRef.current =
+      selectedGroupId;
+  }, [selectedGroupId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.history.replaceState(
+      { dashboardView: "root" },
+      ""
+    );
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    function handlePopState(
+      event: PopStateEvent
+    ) {
+      if (
+        selectedGroupIdRef.current
+      ) {
+        setSelectedGroupId(null);
+
+        window.history.pushState(
+          { dashboardView: "root" },
+          ""
+        );
+
+        return;
+      }
+    }
+
+    window.addEventListener(
+      "popstate",
+      handlePopState
+    );
+
+    return () => {
+      window.removeEventListener(
+        "popstate",
+        handlePopState
+      );
+    };
   }, []);
 
   // ================= PREMIUM LOADER =================
@@ -374,20 +446,26 @@ export default function ViewerDashboard() {
       )}
 
       <DashboardLayout
-        sidebar={
+        renderSidebar={({ closeMobileMenu, showHeader }) => (
           <ViewerSidebar
             active={active}
             setActive={(tab: string) => {
               setSelectedGroupId(null);
               setActive(tab);
             }}
+            onNavigate={closeMobileMenu}
+            showHeader={showHeader}
           />
-        }
+        )}
       >
         {/* GROUP DETAILS */}
         {selectedGroupId && (
           <GroupDetailsTab
             groupId={selectedGroupId}
+            onBack={() =>
+              setSelectedGroupId(null)
+            }
+            backLabel="Back to Groups"
           />
         )}
 
@@ -400,9 +478,22 @@ export default function ViewerDashboard() {
         {!selectedGroupId &&
           active === "Joined Groups" && (
             <JoinedGroupsTab
-              onOpenGroup={(groupId) =>
-                setSelectedGroupId(groupId)
-              }
+              onOpenGroup={(groupId) => {
+                if (
+                  typeof window !==
+                  "undefined"
+                ) {
+                  window.history.pushState(
+                    {
+                      dashboardView: "group",
+                      groupId,
+                    },
+                    ""
+                  );
+                }
+
+                setSelectedGroupId(groupId);
+              }}
             />
           )}
 

@@ -41,6 +41,13 @@ const UserPlanSchema = new mongoose.Schema(
       default: 0,
     },
 
+    carryForwardUsed: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+
     sourcePaymentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Payment",

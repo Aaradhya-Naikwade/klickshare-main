@@ -1,26 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getToken } from "@/lib/auth";
-import { Download, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
+import {
+  Check,
+  Download,
+  Image as ImageIcon,
+  Loader2,
+  Trash2,
+} from "lucide-react";
 
 export default function GroupPhotosTab({
   groupId,
+  refreshToken = 0,
+  onPhotosLoaded,
 }: {
   groupId: string;
+  refreshToken?: number;
+  onPhotosLoaded?: (count: number) => void;
 }) {
-
-  const [photos, setPhotos] =
-    useState<any[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [selectedIds, setSelectedIds] =
-    useState<Set<string>>(new Set());
-
-  const [isPhotographer, setIsPhotographer] =
-    useState(false);
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isPhotographer, setIsPhotographer] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTargetIds, setDeleteTargetIds] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState(false);
 
   const token = getToken();
 
@@ -39,56 +46,68 @@ export default function GroupPhotosTab({
   }
 
   async function loadPhotos() {
+    try {
+      setLoading(true);
 
-    const res = await fetch(
-      `/api/photos/group?groupId=${groupId}`,
-      {
+      const res = await fetch(`/api/photos/group?groupId=${groupId}`, {
         headers: {
-          Authorization:
-            `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to load photos");
       }
-    );
 
-    const data =
-      await res.json();
-
-    setPhotos(data.photos || []);
-
-    setLoading(false);
-
+      const nextPhotos = data.photos || [];
+      setPhotos(nextPhotos);
+      onPhotosLoaded?.(nextPhotos.length);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load photos");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
-    loadPhotos();
-    loadUserRole();
-  }, []);
+    void loadPhotos();
+    void loadUserRole();
+  }, [groupId, refreshToken]);
 
   useEffect(() => {
     setSelectedIds(new Set());
   }, [photos.length]);
 
-  async function handleDownload(
-    photoId?: string
-  ) {
+  const selectedCount = selectedIds.size;
+
+  const sortedPhotos = useMemo(
+    () =>
+      [...photos].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() -
+          new Date(a.createdAt).getTime()
+      ),
+    [photos]
+  );
+
+  async function handleDownload(photoId?: string) {
     if (!photoId || !token) return;
 
-    const res = await fetch(
-      "/api/photos/download",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ photoId }),
-      }
-    );
+    const res = await fetch("/api/photos/download", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ photoId }),
+    });
 
     const data = await res.json();
 
     if (!res.ok || !data?.url) {
+      toast.error("Failed to download photo");
       return;
     }
 
@@ -113,25 +132,22 @@ export default function GroupPhotosTab({
   }
 
   async function handleBulkDownload() {
-    if (!token) return;
+    if (!token || selectedCount === 0) return;
 
     const photoIds = Array.from(selectedIds);
-    if (photoIds.length === 0) return;
+    const res = await fetch("/api/photos/bulk-download", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ photoIds }),
+    });
 
-    const res = await fetch(
-      "/api/photos/bulk-download",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ photoIds }),
-      }
-    );
-
-    if (!res.ok) return;
+    if (!res.ok) {
+      toast.error("Failed to download selected photos");
+      return;
+    }
 
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -145,208 +161,218 @@ export default function GroupPhotosTab({
     URL.revokeObjectURL(url);
   }
 
-  async function handleDelete(photoId: string) {
-    if (!token) return;
-    const confirmed = window.confirm(
-      "Delete this photo permanently?"
-    );
-    if (!confirmed) return;
-
-    const res = await fetch("/api/photos/delete", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ photoId }),
-    });
-
-    if (!res.ok) return;
-    setPhotos((prev) =>
-      prev.filter((p) => p._id !== photoId)
-    );
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(photoId);
-      return next;
-    });
+  function requestDelete(photoId: string) {
+    setDeleteTargetIds([photoId]);
+    setShowDeleteModal(true);
   }
 
-  async function handleBulkDelete() {
-    if (!token) return;
-    const photoIds = Array.from(selectedIds);
-    if (photoIds.length === 0) return;
-    const confirmed = window.confirm(
-      `Delete ${photoIds.length} selected photos?`
-    );
-    if (!confirmed) return;
+  function requestBulkDelete() {
+    if (selectedCount === 0) return;
+    setDeleteTargetIds(Array.from(selectedIds));
+    setShowDeleteModal(true);
+  }
 
-    const res = await fetch("/api/photos/bulk-delete", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ photoIds }),
-    });
+  async function handleConfirmDelete() {
+    if (!token || deleteTargetIds.length === 0) {
+      return;
+    }
 
-    if (!res.ok) return;
-    const data = await res.json();
-    const deletedIds: string[] = data.deleted || [];
+    try {
+      setDeleting(true);
 
-    if (deletedIds.length > 0) {
-      setPhotos((prev) =>
-        prev.filter((p) => !deletedIds.includes(p._id))
-      );
-      setSelectedIds(new Set());
+      if (deleteTargetIds.length === 1) {
+        const photoId = deleteTargetIds[0];
+        const res = await fetch("/api/photos/delete", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ photoId }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to delete photo");
+        }
+
+        toast.success("Photo deleted");
+        setPhotos((prev) => prev.filter((photo) => photo._id !== photoId));
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(photoId);
+          return next;
+        });
+      } else {
+        const res = await fetch("/api/photos/bulk-delete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ photoIds: deleteTargetIds }),
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to delete selected photos");
+        }
+
+        const data = await res.json();
+        const deletedIds: string[] = data.deleted || [];
+
+        if (deletedIds.length > 0) {
+          toast.success("Selected photos deleted");
+          setPhotos((prev) => prev.filter((photo) => !deletedIds.includes(photo._id)));
+          setSelectedIds(new Set());
+        }
+      }
+
+      setShowDeleteModal(false);
+      setDeleteTargetIds([]);
+    } catch (err: any) {
+      toast.error(err.message || "Delete failed");
+    } finally {
+      setDeleting(false);
     }
   }
 
-  if (loading)
+  if (loading) {
     return (
-      <div>
-        Loading photos...
+      <div className="flex justify-center py-16">
+        <div className="flex flex-col items-center rounded-[24px] border border-[#3cc2bf]/20 bg-white px-8 py-8 shadow-sm">
+          <Loader2 className="mb-3 h-8 w-8 animate-spin text-[#1f6563]" />
+          <div className="text-sm font-medium text-slate-700">
+            Loading photos...
+          </div>
+        </div>
       </div>
     );
-
-  if (photos.length === 0)
-    return (
-      <div className="bg-white border rounded-lg p-6 text-center text-gray-500">
-        No photos yet
-      </div>
-    );
+  }
 
   return (
-    <div>
+    <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white p-6 shadow-sm">
+      <div className="mb-5 flex flex-col gap-4 border-b border-[#3cc2bf]/15 pb-5 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-900">
+            Group Photos
+          </h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Review uploaded images, download what you need, and clean up the gallery when required.
+          </p>
+        </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h2 className="text-xl font-bold text-black">
-          Group Photos
-        </h2>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-gray-500">
-            {selectedIds.size} selected
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="rounded-2xl border border-[#3cc2bf]/15 bg-[#f8fcfc] px-4 py-3 text-sm font-medium text-slate-600">
+            {selectedCount} selected
           </div>
           <button
             onClick={handleBulkDownload}
-            disabled={selectedIds.size === 0}
-            className="bg-[#0f766e] hover:bg-[#0b5e58] disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg"
+            disabled={selectedCount === 0}
+            className="inline-flex items-center gap-2 rounded-2xl border border-[#3cc2bf]/20 bg-[#f8fcfc] px-4 py-3 text-sm font-medium text-[#1f6563] transition hover:bg-[#eef8f8] disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
           >
+            <Download className="h-4 w-4" />
             Download Selected
           </button>
           {isPhotographer && (
             <button
-              onClick={handleBulkDelete}
-              disabled={selectedIds.size === 0}
-              className="bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg"
+              onClick={requestBulkDelete}
+              disabled={selectedCount === 0}
+              className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
             >
+              <Trash2 className="h-4 w-4" />
               Delete Selected
             </button>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-
-        {photos.map(
-          (photo) => (
-
+      {sortedPhotos.length === 0 ? (
+        <div className="rounded-[24px] border border-dashed border-[#3cc2bf]/25 bg-[#f8fcfc] px-6 py-12 text-center">
+          <ImageIcon className="mx-auto mb-3 h-8 w-8 text-[#1f6563]" />
+          <div className="text-lg font-semibold text-slate-900">
+            No photos yet
+          </div>
+          <div className="mt-2 text-sm text-slate-600">
+            Upload photos above and they will appear here.
+          </div>
+        </div>
+      ) : (
+        <div className="grid auto-rows-[140px] grid-cols-2 gap-4 md:auto-rows-[170px] md:grid-cols-4">
+          {sortedPhotos.map((photo, index) => (
             <div
-              key={
-                photo._id
-              }
-              className="bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md relative group"
+              key={photo._id}
+              className={`group relative overflow-hidden rounded-[24px] border border-[#3cc2bf]/15 bg-[#fcfefe] shadow-sm transition hover:shadow-md ${
+                index % 7 === 0
+                  ? "col-span-2 row-span-2"
+                  : index % 5 === 0
+                    ? "row-span-2"
+                    : "col-span-1 row-span-1"
+              }`}
             >
-
               <img
-                src={
-                  photo.photoUrl
-                }
-                className="w-full h-48 object-cover"
+                src={photo.photoUrl}
+                alt="Group photo"
+                className="h-full w-full object-cover"
               />
 
               <button
-                onClick={() =>
-                  toggleSelect(photo._id)
-                }
-                className="
-                  absolute top-2 left-2
-                  w-6 h-6
-                  rounded
-                  border border-white
-                  bg-white/80
-                  flex items-center justify-center
-                  text-xs
-                  shadow
-                "
+                type="button"
+                onClick={() => toggleSelect(photo._id)}
+                className={`absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-xl border text-white shadow-sm transition ${
+                  selectedIds.has(photo._id)
+                    ? "border-[#1f6563] bg-[#1f6563]"
+                    : "border-white/70 bg-white/80 text-slate-500 hover:bg-white"
+                }`}
                 aria-label="Select photo"
               >
-                {selectedIds.has(photo._id)
-                  ? "✓"
-                  : ""}
+                {selectedIds.has(photo._id) && <Check className="h-4 w-4" />}
               </button>
 
-              <button
-                onClick={() =>
-                  handleDownload(photo._id)
-                }
-                className="
-                  absolute top-2 right-2
-                  w-8 h-8
-                  flex items-center justify-center
-                  rounded-lg
-                  bg-white/80
-                  hover:bg-white
-                  text-gray-700
-                  shadow
-                  opacity-0
-                  group-hover:opacity-100
-                  transition
-                "
-                aria-label="Download photo"
-              >
-                <Download className="w-4 h-4" />
-              </button>
-
-              {isPhotographer && (
+              <div className="absolute right-3 top-3 flex gap-2 opacity-100 transition sm:opacity-0 sm:group-hover:opacity-100">
                 <button
-                  onClick={() =>
-                    handleDelete(photo._id)
-                  }
-                  className="
-                  absolute top-2 right-12
-                  w-8 h-8
-                  flex items-center justify-center
-                  rounded-lg
-                  bg-white/80
-                  hover:bg-white
-                  text-red-600
-                  shadow
-                  opacity-0
-                  group-hover:opacity-100
-                  transition
-                "
-                  aria-label="Delete photo"
+                  type="button"
+                  onClick={() => handleDownload(photo._id)}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/88 text-slate-700 shadow-sm transition hover:bg-white"
+                  aria-label="Download photo"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Download className="h-4 w-4" />
                 </button>
-              )}
 
-              <div className="p-2 text-xs text-gray-500">
-
-                {new Date(
-                  photo.createdAt
-                ).toLocaleDateString()}
-
+                {isPhotographer && (
+                  <button
+                    type="button"
+                    onClick={() => requestDelete(photo._id)}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/88 text-red-600 shadow-sm transition hover:bg-white"
+                    aria-label="Delete photo"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/35 to-transparent" />
+
             </div>
+          ))}
+        </div>
+      )}
 
-          )
-        )}
-
-      </div>
-
+      {showDeleteModal && (
+        <DeleteConfirmationModal
+          title={deleteTargetIds.length > 1 ? "Delete Photos" : "Delete Photo"}
+          message={
+            deleteTargetIds.length > 1
+              ? `This will permanently delete ${deleteTargetIds.length} selected photos.`
+              : "This will permanently delete this photo."
+          }
+          loading={deleting}
+          onCancel={() => {
+            if (deleting) return;
+            setShowDeleteModal(false);
+            setDeleteTargetIds([]);
+          }}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 }

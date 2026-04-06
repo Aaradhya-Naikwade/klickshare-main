@@ -117,11 +117,39 @@ export async function getPlanStatus(
         quota: planDoc.quota,
       }
     : getPlan(planKey);
-  const used = await getPlanUsage(
+  const usageSincePlanStart =
+    await getPlanUsage(
     userId,
     activePlan.planStart,
     activePlan.planEnd
   );
+  let carryForwardUsed =
+    typeof activePlan.carryForwardUsed === "number" &&
+    activePlan.carryForwardUsed > 0
+      ? activePlan.carryForwardUsed
+      : 0;
+
+  if (
+    carryForwardUsed === 0 &&
+    activePlan.sourcePaymentId
+  ) {
+    const legacyWindowStart =
+      new Date(activePlan.planStart);
+    legacyWindowStart.setFullYear(
+      legacyWindowStart.getFullYear() - 1
+    );
+
+    carryForwardUsed =
+      await Photo.countDocuments({
+        uploadedBy: userId,
+        createdAt: {
+          $gte: legacyWindowStart,
+          $lt: activePlan.planStart,
+        },
+      });
+  }
+  const used =
+    carryForwardUsed + usageSincePlanStart;
 
   const effectiveQuota =
     typeof activePlan.planQuota === "number" &&
@@ -202,8 +230,11 @@ export async function activatePaidPlan(
 
   if (currentActivePlan) {
     currentActivePlan.planKey = planKey;
+    currentActivePlan.planStart = now;
+    currentActivePlan.planEnd = addYears(now, 1);
     currentActivePlan.priceInr = priceInr;
     currentActivePlan.planQuota = effectiveQuota;
+    currentActivePlan.carryForwardUsed = 0;
     currentActivePlan.sourcePaymentId =
       sourcePaymentId || null;
 
@@ -222,6 +253,7 @@ export async function activatePaidPlan(
     status: "active",
     priceInr,
     planQuota: effectiveQuota,
+    carryForwardUsed: 0,
     sourcePaymentId:
       sourcePaymentId || null,
   });

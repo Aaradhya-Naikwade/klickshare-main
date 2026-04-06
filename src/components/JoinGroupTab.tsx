@@ -1,208 +1,42 @@
-// "use client";
-
-// import { useState } from "react";
-// import { getToken } from "@/lib/auth";
-
-// export default function JoinGroupTab() {
-
-//   const [inviteCode, setInviteCode] =
-//     useState("");
-
-//   const [loading, setLoading] =
-//     useState(false);
-
-//   const [success, setSuccess] =
-//     useState("");
-
-//   const [error, setError] =
-//     useState("");
-
-//   const [status, setStatus] =
-//     useState("");
-
-//   async function handleJoin() {
-
-//     try {
-
-//       setLoading(true);
-//       setError("");
-//       setSuccess("");
-//       setStatus("");
-
-//       const token =
-//         getToken();
-
-//       const res = await fetch(
-//         "/api/groups/join",
-//         {
-//           method: "POST",
-
-//           headers: {
-//             "Content-Type":
-//               "application/json",
-//           },
-
-//           body: JSON.stringify({
-//             token,
-//             inviteCode,
-//           }),
-//         }
-//       );
-
-//       const data =
-//         await res.json();
-
-//       if (!res.ok) {
-//         throw new Error(
-//           data.error ||
-//             "Failed to join group"
-//         );
-//       }
-
-//       setStatus(data.status);
-
-//       if (
-//         data.status ===
-//         "approved"
-//       ) {
-
-//         setSuccess(
-//           "Successfully joined group"
-//         );
-
-//       } else {
-
-//         setSuccess(
-//           "Join request sent. Waiting for approval."
-//         );
-
-//       }
-
-//       setInviteCode("");
-
-//     } catch (err: any) {
-
-//       setError(err.message);
-
-//     } finally {
-
-//       setLoading(false);
-
-//     }
-
-//   }
-
-//   return (
-//     <div className="max-w-xl">
-
-//       {/* Header */}
-//       <h1 className="text-2xl font-bold text-black mb-6">
-//         Join New Group
-//       </h1>
-
-//       <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-
-//         {/* Success */}
-//         {success && (
-//           <div className="bg-green-50 text-green-700 p-3 rounded mb-4">
-//             {success}
-//           </div>
-//         )}
-
-//         {/* Error */}
-//         {error && (
-//           <div className="bg-red-50 text-red-700 p-3 rounded mb-4">
-//             {error}
-//           </div>
-//         )}
-
-//         {/* Invite Code Input */}
-//         <div className="mb-6">
-
-//           <label className="text-sm font-medium text-black">
-//             Enter Invite Code
-//           </label>
-
-//           <input
-//             value={inviteCode}
-//             onChange={(e) =>
-//               setInviteCode(
-//                 e.target.value.toUpperCase()
-//               )
-//             }
-//             placeholder="Ex: A1B2C3D4"
-//             className="w-full mt-1 p-3 border border-gray-300 rounded-lg text-black uppercase tracking-wider"
-//           />
-
-//         </div>
-
-//         {/* Join Button */}
-//         <button
-//           onClick={handleJoin}
-//           disabled={
-//             loading ||
-//             !inviteCode
-//           }
-//           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg disabled:bg-gray-400"
-//         >
-
-//           {loading
-//             ? "Joining..."
-//             : "Join Group"}
-
-//         </button>
-
-//         {/* Info */}
-//         <div className="mt-6 text-sm text-gray-500">
-
-//           Private groups can only be joined using invite codes or QR codes.
-
-//         </div>
-
-//       </div>
-
-//     </div>
-//   );
-// }
-
-
-
-
-
-
 "use client";
 
 import { useState } from "react";
 import { getToken } from "@/lib/auth";
 import { toast } from "sonner";
-
 import {
   Users,
   KeyRound,
   Loader2,
   CheckCircle,
   Clock,
+  ArrowRight,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function JoinGroupTab() {
-
   const [inviteCode, setInviteCode] =
     useState("");
-
   const [loading, setLoading] =
     useState(false);
-
   const [status, setStatus] =
     useState("");
 
+  function handleInviteCodeChange(
+    value: string
+  ) {
+    const sanitizedValue = value
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .slice(0, 8);
+
+    setInviteCode(sanitizedValue);
+  }
+
   async function handleJoin() {
-
     try {
-
       setLoading(true);
 
-      const token =
-        getToken();
+      const token = getToken();
 
       if (!token) {
         throw new Error("Please login again");
@@ -212,22 +46,19 @@ export default function JoinGroupTab() {
         "/api/groups/join",
         {
           method: "POST",
-
           headers: {
             "Content-Type":
               "application/json",
             Authorization:
               `Bearer ${token}`,
           },
-
           body: JSON.stringify({
             inviteCode,
           }),
         }
       );
 
-      const data =
-        await res.json();
+      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(
@@ -238,185 +69,149 @@ export default function JoinGroupTab() {
 
       setStatus(data.status);
 
-      if (
-        data.status ===
-        "approved"
-      ) {
-
+      if (data.status === "approved") {
         toast.success(
           "Successfully joined group"
         );
-
       } else {
-
         toast.success(
           "Join request sent for approval"
         );
-
       }
 
       setInviteCode("");
-
     } catch (err: any) {
-
-      toast.error(
-        err.message
-      );
-
+      toast.error(err.message);
     } finally {
-
       setLoading(false);
-
     }
-
   }
 
   return (
-
-    <div className="max-w-xl space-y-6">
-
-      {/* HEADER */}
-      <div>
-
-        <h1 className="text-2xl font-bold text-[#0f766e] flex items-center gap-2">
-
-          <Users className="w-6 h-6" />
-
+    <div className="max-w-4xl space-y-6">
+      <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white/95 p-6 shadow-[0_20px_60px_-30px_rgba(31,101,99,0.25)]">
+        <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight text-slate-900">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#3cc2bf]/12 text-[#1f6563]">
+            <Users className="h-5 w-5" />
+          </span>
           Join New Group
-
         </h1>
 
-        <p className="text-sm text-[#6b7280] mt-1">
-
-          Enter an invite code to join a private group
-
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          Enter the 8-character invite code shared by the group admin.
         </p>
-
       </div>
 
-      {/* CARD */}
-      <div className="bg-white border border-[#b2dfdb] rounded-xl shadow-sm p-6">
-
-        {/* SUCCESS STATUS */}
+      <div className="rounded-[28px] border border-[#3cc2bf]/20 bg-white p-6 shadow-sm">
         {status === "approved" && (
-
-          <div className="bg-[#e0f2f1] border border-[#b2dfdb] text-[#0f766e] p-4 rounded-lg flex items-center gap-3 mb-4">
-
-            <CheckCircle className="w-5 h-5" />
-
+          <div className="mb-5 flex items-center gap-3 rounded-2xl border border-[#3cc2bf]/20 bg-[#ecf9f8] p-4 text-[#1f6563]">
+            <CheckCircle className="h-5 w-5" />
             Successfully joined the group
-
           </div>
-
         )}
 
         {status === "pending" && (
-
-          <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded-lg flex items-center gap-3 mb-4">
-
-            <Clock className="w-5 h-5" />
-
+          <div className="mb-5 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-700">
+            <Clock className="h-5 w-5" />
             Request sent. Waiting for approval
-
           </div>
-
         )}
 
-        {/* INPUT */}
         <div className="mb-6">
-
-          <label className="text-sm font-medium text-[#111827]">
-
+          <label className="text-sm font-medium text-slate-700">
             Invite Code
-
           </label>
 
-          <div className="relative mt-1">
-
-            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0f766e] w-5 h-5" />
+          <div className="relative mt-2">
+            <KeyRound className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#1f6563]" />
 
             <input
               value={inviteCode}
               onChange={(e) =>
-                setInviteCode(
-                  e.target.value.toUpperCase()
+                handleInviteCodeChange(
+                  e.target.value
                 )
               }
-              placeholder="Enter invite code"
+              placeholder="Ex: A1B2C3D4"
+              inputMode="text"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              maxLength={8}
               className="
                 w-full
-                pl-10
+                rounded-2xl
+                border border-[#3cc2bf]/25
+                bg-[#f8fcfc]
+                py-4
+                pl-12
                 pr-4
-                py-3
-                border border-[#b2dfdb]
-                rounded-lg
-                text-[#111827]
+                text-base
+                font-medium
+                tracking-[0.3em]
+                text-slate-900
                 uppercase
-                tracking-widest
-                focus:ring-2
-                focus:ring-[#0f766e]
-                focus:border-[#0f766e]
-                outline-none
+                transition
+                placeholder:tracking-[0.18em]
+                placeholder:text-slate-400
+                focus:border-[#1f6563]
+                focus:bg-white
+                focus:outline-none
+                focus:ring-4
+                focus:ring-[#3cc2bf]/20
               "
             />
-
           </div>
 
+          <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-400">
+            Only letters and numbers are allowed.
+          </p>
         </div>
 
-        {/* BUTTON */}
         <button
           onClick={handleJoin}
-          disabled={
-            loading ||
-            !inviteCode
-          }
+          disabled={loading || !inviteCode}
           className="
-            w-full
-            bg-[#0f766e]
-            hover:bg-[#0b5e58]
-            text-white
-            py-3
-            rounded-lg
-            font-medium
             flex
+            w-full
             items-center
             justify-center
             gap-2
+            rounded-2xl
+            bg-[#1f6563]
+            py-3.5
+            text-sm
+            font-medium
+            text-white
             transition
+            hover:bg-[#174d4b]
+            disabled:cursor-not-allowed
             disabled:opacity-50
           "
         >
-
           {loading ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
               Joining group...
             </>
           ) : (
             <>
-              <Users className="w-5 h-5" />
+              <Users className="h-5 w-5" />
               Join Group
+              <ArrowRight className="h-4 w-4" />
             </>
           )}
-
         </button>
 
-        {/* INFO */}
-        <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
-
-          <div className="text-sm text-[#6b7280]">
-
-            Private groups require an invite code or QR code provided by the group admin.
-
+        <div className="mt-6 rounded-2xl border border-[#3cc2bf]/15 bg-[#f8fcfc] p-4">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="mt-0.5 h-5 w-5 text-[#1f6563]" />
+            <p className="text-sm leading-6 text-slate-600">
+              Private groups require an invite code. Some groups approve instantly, while others may send your request for review.
+            </p>
           </div>
-
         </div>
-
       </div>
-
     </div>
-
   );
-
 }

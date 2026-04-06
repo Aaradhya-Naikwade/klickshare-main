@@ -20,7 +20,7 @@ export default function AuthGuard({
 
     window.history.pushState(null, "", location.href);
     window.onpopstate = function () {
-      window.history.go(1);
+      window.history.go(1); 
     };
 
     return () => {

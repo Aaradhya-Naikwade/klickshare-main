@@ -301,11 +301,11 @@
 
 import { useEffect, useState } from "react";
 import { getToken } from "@/lib/auth";
+import { toast } from "sonner";
 import DeleteConfirmationModal from "@/components/DeleteConfirmationModal";
 
 import {
   CalendarDays,
-  RefreshCw,
   FolderOpen,
   Trash2,
   Loader2,
@@ -382,7 +382,7 @@ export default function MyEventsTab({
   async function handleDeleteEvent() {
     if (!deleteEventId) return;
     if (!token) {
-      alert("Please login again");
+      toast.error("Please login again");
       return;
     }
 
@@ -413,14 +413,14 @@ export default function MyEventsTab({
         );
       }
 
-      alert("Event deleted successfully");
+      toast.success("Event deleted successfully");
 
       setShowDeleteModal(false);
       setDeleteEventId(null);
 
       loadEvents();
     } catch (err: any) {
-      alert(
+      toast.error(
         err.message ||
           "Failed to delete event"
       );
@@ -467,7 +467,7 @@ export default function MyEventsTab({
   return (
     <div className="space-y-6">
       {/* ================= HEADER ================= */}
-      <div className="flex justify-between items-center">
+      <div>
         <div>
           <h1 className="text-2xl font-bold text-[#0f766e] flex items-center gap-2">
             <CalendarDays className="w-6 h-6" />
@@ -477,23 +477,6 @@ export default function MyEventsTab({
             Manage and organize your events
           </p>
         </div>
-
-        <button
-          onClick={loadEvents}
-          className="
-            bg-[#e0f2f1]
-            hover:bg-[#ccebea]
-            text-[#0f766e]
-            px-4 py-2
-            rounded-lg
-            flex items-center gap-2
-            text-sm
-            border border-[#b2dfdb]
-          "
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
       </div>
 
       {/* ================= GRID ================= */}
@@ -537,6 +520,12 @@ export default function MyEventsTab({
               </span>
             </div>
 
+            <div className="mb-4 text-xs text-[#6b7280]">
+              {event.groupCount > 0
+                ? "Open this event to manage existing groups."
+                : "No groups yet. Create the first group for this event."}
+            </div>
+
             {/* DATE */}
             <div className="text-xs text-[#9ca3af] mb-4">
               Created{" "}
@@ -564,7 +553,9 @@ export default function MyEventsTab({
                 "
               >
                 <FolderOpen className="w-4 h-4" />
-                View Groups
+                {event.groupCount > 0
+                  ? "Manage Groups"
+                  : "Create First Group"}
               </button>
 
               {/* DELETE */}
